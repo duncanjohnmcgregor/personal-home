@@ -20,6 +20,24 @@ jobs:
         node-version: '18'
         cache: 'npm'
 
+    - name: Check Vercel Token
+      run: |
+        if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+          echo "❌ VERCEL_TOKEN secret is not set!"
+          echo ""
+          echo "🔧 To fix this:"
+          echo "1. Go to https://vercel.com/account/tokens"
+          echo "2. Create a new token named 'GitHub Actions'"
+          echo "3. Copy the token"
+          echo "4. Go to GitHub repo → Settings → Secrets and variables → Actions"
+          echo "5. Add secret named 'VERCEL_TOKEN' with the token value"
+          echo ""
+          echo "📖 See VERCEL_SECRETS_SETUP.md for detailed instructions"
+          exit 1
+        else
+          echo "✅ VERCEL_TOKEN is configured"
+        fi
+
     - name: Install dependencies
       run: npm ci
 
