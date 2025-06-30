@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Vercel Postgres Setup Verification Script
-# This script verifies that the Vercel Postgres setup was completed correctly
+# Neon Database Setup Verification Script
+# This script verifies that the Neon database setup was completed correctly
 
 set -e
 
