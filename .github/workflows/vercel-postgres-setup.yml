@@ -53,7 +53,6 @@ jobs:
 
     - name: Authenticate with Vercel
       run: |
-        echo "${{ secrets.VERCEL_TOKEN }}" | vercel login --stdin
         vercel link --yes --token ${{ secrets.VERCEL_TOKEN }}
 
     - name: Check if database exists
@@ -106,9 +105,9 @@ jobs:
         # Generate NEXTAUTH_SECRET if not exists
         if ! vercel env ls --token ${{ secrets.VERCEL_TOKEN }} | grep -q "NEXTAUTH_SECRET"; then
           NEXTAUTH_SECRET=$(openssl rand -base64 32)
-          echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET production --token ${{ secrets.VERCEL_TOKEN }}
-          echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET preview --token ${{ secrets.VERCEL_TOKEN }}
-          echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET development --token ${{ secrets.VERCEL_TOKEN }}
+          vercel env add NEXTAUTH_SECRET production --token ${{ secrets.VERCEL_TOKEN }} <<< "$NEXTAUTH_SECRET"
+          vercel env add NEXTAUTH_SECRET preview --token ${{ secrets.VERCEL_TOKEN }} <<< "$NEXTAUTH_SECRET"
+          vercel env add NEXTAUTH_SECRET development --token ${{ secrets.VERCEL_TOKEN }} <<< "$NEXTAUTH_SECRET"
           echo "✅ NEXTAUTH_SECRET generated and set"
         fi
         
@@ -119,18 +118,18 @@ jobs:
           NEXTAUTH_URL="https://${{ secrets.STAGING_DOMAIN || 'music-playlist-manager-staging.vercel.app' }}"
         fi
         
-        echo "$NEXTAUTH_URL" | vercel env add NEXTAUTH_URL production --token ${{ secrets.VERCEL_TOKEN }} --force
-        echo "$NEXTAUTH_URL" | vercel env add NEXTAUTH_URL preview --token ${{ secrets.VERCEL_TOKEN }} --force
+        vercel env add NEXTAUTH_URL production --token ${{ secrets.VERCEL_TOKEN }} --force <<< "$NEXTAUTH_URL"
+        vercel env add NEXTAUTH_URL preview --token ${{ secrets.VERCEL_TOKEN }} --force <<< "$NEXTAUTH_URL"
         
         # Set Spotify credentials if provided
         if [ -n "${{ secrets.SPOTIFY_CLIENT_ID }}" ]; then
-          echo "${{ secrets.SPOTIFY_CLIENT_ID }}" | vercel env add SPOTIFY_CLIENT_ID production --token ${{ secrets.VERCEL_TOKEN }} --force
-          echo "${{ secrets.SPOTIFY_CLIENT_ID }}" | vercel env add SPOTIFY_CLIENT_ID preview --token ${{ secrets.VERCEL_TOKEN }} --force
+          vercel env add SPOTIFY_CLIENT_ID production --token ${{ secrets.VERCEL_TOKEN }} --force <<< "${{ secrets.SPOTIFY_CLIENT_ID }}"
+          vercel env add SPOTIFY_CLIENT_ID preview --token ${{ secrets.VERCEL_TOKEN }} --force <<< "${{ secrets.SPOTIFY_CLIENT_ID }}"
         fi
         
         if [ -n "${{ secrets.SPOTIFY_CLIENT_SECRET }}" ]; then
-          echo "${{ secrets.SPOTIFY_CLIENT_SECRET }}" | vercel env add SPOTIFY_CLIENT_SECRET production --token ${{ secrets.VERCEL_TOKEN }} --force
-          echo "${{ secrets.SPOTIFY_CLIENT_SECRET }}" | vercel env add SPOTIFY_CLIENT_SECRET preview --token ${{ secrets.VERCEL_TOKEN }} --force
+          vercel env add SPOTIFY_CLIENT_SECRET production --token ${{ secrets.VERCEL_TOKEN }} --force <<< "${{ secrets.SPOTIFY_CLIENT_SECRET }}"
+          vercel env add SPOTIFY_CLIENT_SECRET preview --token ${{ secrets.VERCEL_TOKEN }} --force <<< "${{ secrets.SPOTIFY_CLIENT_SECRET }}"
         fi
 
     - name: Generate Prisma Client

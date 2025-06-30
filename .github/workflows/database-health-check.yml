@@ -48,7 +48,6 @@ jobs:
 
     - name: Authenticate with Vercel
       run: |
-        echo "${{ secrets.VERCEL_TOKEN }}" | vercel login --stdin
         vercel link --yes --token ${{ secrets.VERCEL_TOKEN }}
 
     - name: Pull environment variables

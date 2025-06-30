@@ -97,16 +97,18 @@ authenticate_vercel() {
     # Check if VERCEL_TOKEN is set (for CI/CD)
     if [ -n "$VERCEL_TOKEN" ]; then
         print_status "Using VERCEL_TOKEN for authentication"
-        echo "$VERCEL_TOKEN" | vercel login --stdin
+        # No need for explicit login with token, just link project
+        print_status "Linking project with token..."
+        vercel link --yes --token $VERCEL_TOKEN
     else
         # Interactive login for local development
         print_status "Please login to Vercel (browser will open)..."
         vercel login
+        
+        # Link project after interactive login
+        print_status "Linking project..."
+        vercel link --yes
     fi
-    
-    # Link project
-    print_status "Linking project..."
-    vercel link --yes ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
     
     print_success "Vercel authentication completed"
 }
@@ -166,9 +168,9 @@ setup_environment_variables() {
         print_status "Generating NEXTAUTH_SECRET..."
         local nextauth_secret=$(openssl rand -base64 32)
         
-        echo "$nextauth_secret" | vercel env add NEXTAUTH_SECRET production ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
-        echo "$nextauth_secret" | vercel env add NEXTAUTH_SECRET preview ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
-        echo "$nextauth_secret" | vercel env add NEXTAUTH_SECRET development ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
+        vercel env add NEXTAUTH_SECRET production ${VERCEL_TOKEN:+--token $VERCEL_TOKEN} <<< "$nextauth_secret"
+        vercel env add NEXTAUTH_SECRET preview ${VERCEL_TOKEN:+--token $VERCEL_TOKEN} <<< "$nextauth_secret"
+        vercel env add NEXTAUTH_SECRET development ${VERCEL_TOKEN:+--token $VERCEL_TOKEN} <<< "$nextauth_secret"
         
         # Add to local env file
         echo "NEXTAUTH_SECRET=\"$nextauth_secret\"" >> .env.local
@@ -185,8 +187,8 @@ setup_environment_variables() {
     fi
     
     print_status "Setting NEXTAUTH_URL to $nextauth_url..."
-    echo "$nextauth_url" | vercel env add NEXTAUTH_URL production --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
-    echo "$nextauth_url" | vercel env add NEXTAUTH_URL preview --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
+    vercel env add NEXTAUTH_URL production --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN} <<< "$nextauth_url"
+    vercel env add NEXTAUTH_URL preview --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN} <<< "$nextauth_url"
     
     # Add to local env file if not exists
     if ! grep -q "NEXTAUTH_URL" .env.local; then
@@ -196,8 +198,8 @@ setup_environment_variables() {
     # Set Spotify credentials if provided
     if [ -n "$SPOTIFY_CLIENT_ID" ]; then
         print_status "Setting Spotify credentials..."
-        echo "$SPOTIFY_CLIENT_ID" | vercel env add SPOTIFY_CLIENT_ID production --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
-        echo "$SPOTIFY_CLIENT_ID" | vercel env add SPOTIFY_CLIENT_ID preview --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
+        vercel env add SPOTIFY_CLIENT_ID production --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN} <<< "$SPOTIFY_CLIENT_ID"
+        vercel env add SPOTIFY_CLIENT_ID preview --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN} <<< "$SPOTIFY_CLIENT_ID"
         
         if ! grep -q "SPOTIFY_CLIENT_ID" .env.local; then
             echo "SPOTIFY_CLIENT_ID=\"$SPOTIFY_CLIENT_ID\"" >> .env.local
@@ -205,8 +207,8 @@ setup_environment_variables() {
     fi
     
     if [ -n "$SPOTIFY_CLIENT_SECRET" ]; then
-        echo "$SPOTIFY_CLIENT_SECRET" | vercel env add SPOTIFY_CLIENT_SECRET production --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
-        echo "$SPOTIFY_CLIENT_SECRET" | vercel env add SPOTIFY_CLIENT_SECRET preview --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN}
+        vercel env add SPOTIFY_CLIENT_SECRET production --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN} <<< "$SPOTIFY_CLIENT_SECRET"
+        vercel env add SPOTIFY_CLIENT_SECRET preview --force ${VERCEL_TOKEN:+--token $VERCEL_TOKEN} <<< "$SPOTIFY_CLIENT_SECRET"
         
         if ! grep -q "SPOTIFY_CLIENT_SECRET" .env.local; then
             echo "SPOTIFY_CLIENT_SECRET=\"$SPOTIFY_CLIENT_SECRET\"" >> .env.local
