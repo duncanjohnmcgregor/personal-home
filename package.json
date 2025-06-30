@@ -12,6 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:test": "node scripts/test-db-connection.js",
+    "db:verify": "./scripts/verify-setup.sh",
+    "setup:vercel-postgres": "./scripts/setup-vercel-postgres.sh",
     "type-check": "tsc --noEmit",
     "deploy": "./scripts/auto-deploy.sh",
     "deploy:ultra": "./scripts/ultra-auto-deploy.sh",

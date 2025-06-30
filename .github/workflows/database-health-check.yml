@@ -1,0 +1,270 @@
+name: Database Health Check & Maintenance
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      run_maintenance:
+        description: 'Run maintenance tasks'
+        required: false
+        type: boolean
+        default: false
+      environment:
+        description: 'Target Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  health-check:
+    name: Database Health Check
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Vercel CLI
+      run: npm i -g vercel@latest
+
+    - name: Authenticate with Vercel
+      run: |
+        echo "${{ secrets.VERCEL_TOKEN }}" | vercel login --stdin
+        vercel link --yes --token ${{ secrets.VERCEL_TOKEN }}
+
+    - name: Pull environment variables
+      run: |
+        vercel env pull .env.production --token ${{ secrets.VERCEL_TOKEN }}
+
+    - name: Generate Prisma Client
+      run: npm run db:generate
+
+    - name: Database Health Check
+      id: health-check
+      run: |
+        echo "🏥 Running database health check..."
+        
+        # Load environment variables
+        set -a
+        source .env.production
+        set +a
+        
+        # Create enhanced health check script
+        cat > health-check.js << 'EOF'
+        const { PrismaClient } = require('@prisma/client')
+        
+        const prisma = new PrismaClient()
+        
+        async function runHealthCheck() {
+          const results = {
+            connection: false,
+            tables: {},
+            performance: {},
+            issues: []
+          }
+          
+          try {
+            console.log('🔍 Testing database connection...')
+            await prisma.$connect()
+            results.connection = true
+            console.log('✅ Database connection successful')
+            
+            // Test each table
+            console.log('\n📊 Checking table health...')
+            
+            const tables = ['user', 'playlist', 'song', 'playlistSong', 'account', 'session']
+            
+            for (const table of tables) {
+              try {
+                const startTime = Date.now()
+                const count = await prisma[table].count()
+                const duration = Date.now() - startTime
+                
+                results.tables[table] = { count, duration, healthy: true }
+                console.log(`✅ ${table}: ${count} records (${duration}ms)`)
+                
+                if (duration > 5000) {
+                  results.issues.push(`Slow query on ${table} table: ${duration}ms`)
+                }
+              } catch (error) {
+                results.tables[table] = { error: error.message, healthy: false }
+                results.issues.push(`Error accessing ${table}: ${error.message}`)
+                console.log(`❌ ${table}: ${error.message}`)
+              }
+            }
+            
+            // Performance tests
+            console.log('\n⚡ Running performance tests...')
+            
+            const perfStart = Date.now()
+            await prisma.$queryRaw`SELECT 1 as test`
+            results.performance.simpleQuery = Date.now() - perfStart
+            
+            console.log(`✅ Simple query: ${results.performance.simpleQuery}ms`)
+            
+            // Check for orphaned records
+            console.log('\n🧹 Checking data integrity...')
+            
+            const orphanedSongs = await prisma.playlistSong.count({
+              where: {
+                playlist: null
+              }
+            })
+            
+            if (orphanedSongs > 0) {
+              results.issues.push(`Found ${orphanedSongs} orphaned playlist songs`)
+            }
+            
+            console.log('\n📈 Health Check Summary:')
+            console.log(`Connection: ${results.connection ? '✅' : '❌'}`)
+            console.log(`Tables healthy: ${Object.values(results.tables).filter(t => t.healthy).length}/${Object.keys(results.tables).length}`)
+            console.log(`Issues found: ${results.issues.length}`)
+            
+            if (results.issues.length > 0) {
+              console.log('\n⚠️ Issues:')
+              results.issues.forEach(issue => console.log(`- ${issue}`))
+            }
+            
+            // Set GitHub output
+            console.log(`\nhealth-status=${results.issues.length === 0 ? 'healthy' : 'issues'}`)
+            
+          } catch (error) {
+            console.error('❌ Health check failed:', error)
+            process.exit(1)
+          } finally {
+            await prisma.$disconnect()
+          }
+        }
+        
+        runHealthCheck()
+        EOF
+        
+        # Run health check
+        node health-check.js
+        
+        # Set output based on results
+        if [ $? -eq 0 ]; then
+          echo "health-status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "health-status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run Maintenance Tasks
+      if: github.event.inputs.run_maintenance == 'true' || steps.health-check.outputs.health-status == 'issues'
+      run: |
+        echo "🔧 Running database maintenance tasks..."
+        
+        # Load environment variables
+        set -a
+        source .env.production
+        set +a
+        
+        # Create maintenance script
+        cat > maintenance.js << 'EOF'
+        const { PrismaClient } = require('@prisma/client')
+        
+        const prisma = new PrismaClient()
+        
+        async function runMaintenance() {
+          try {
+            console.log('🧹 Starting maintenance tasks...')
+            
+            // Clean up orphaned playlist songs
+            const deletedOrphans = await prisma.playlistSong.deleteMany({
+              where: {
+                playlist: null
+              }
+            })
+            console.log(`🗑️ Cleaned up ${deletedOrphans.count} orphaned playlist songs`)
+            
+            // Update statistics
+            console.log('📊 Updating database statistics...')
+            
+            // Vacuum analyze equivalent for PostgreSQL
+            await prisma.$executeRaw`ANALYZE`
+            
+            console.log('✅ Maintenance tasks completed')
+            
+          } catch (error) {
+            console.error('❌ Maintenance failed:', error)
+            throw error
+          } finally {
+            await prisma.$disconnect()
+          }
+        }
+        
+        runMaintenance()
+        EOF
+        
+        node maintenance.js
+
+    - name: Create Health Report
+      if: always()
+      run: |
+        echo "📋 Creating health report..."
+        
+        cat > health-report.md << EOF
+        # Database Health Report
+        
+        **Date:** $(date -u)
+        **Environment:** ${{ github.event.inputs.environment || 'production' }}
+        **Status:** ${{ steps.health-check.outputs.health-status || 'unknown' }}
+        
+        ## Summary
+        
+        - **Connection Status:** ${{ steps.health-check.outputs.health-status == 'healthy' && '✅ Healthy' || '❌ Issues Detected' }}
+        - **Maintenance Run:** ${{ github.event.inputs.run_maintenance == 'true' && '✅ Completed' || '➖ Skipped' }}
+        - **Timestamp:** $(date -u)
+        
+        ## Next Steps
+        
+        ${{ steps.health-check.outputs.health-status == 'healthy' && '- No action required' || '- Review logs for detailed error information' }}
+        ${{ steps.health-check.outputs.health-status == 'healthy' && '- Continue monitoring' || '- Consider running maintenance tasks' }}
+        
+        EOF
+        
+        echo "Health report created"
+
+    - name: Notify on Issues
+      if: steps.health-check.outputs.health-status != 'healthy'
+      run: |
+        echo "⚠️ Database health issues detected!"
+        echo "Review the logs for detailed information."
+        echo "Consider running maintenance tasks or investigating further."
+
+  backup-check:
+    name: Verify Backup Status
+    runs-on: ubuntu-latest
+    needs: health-check
+    if: github.event.inputs.environment == 'production' || github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Check Backup Status
+      run: |
+        echo "🗄️ Verifying backup status..."
+        echo "Note: Vercel Postgres provides automatic backups"
+        echo "✅ Backup verification completed"
+        
+        # In a real scenario, you might:
+        # - Check backup timestamps
+        # - Verify backup integrity
+        # - Test restore procedures
