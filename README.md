@@ -2,6 +2,32 @@
 
 A web application that allows users to manage music playlists across multiple platforms including Spotify, Beatport, and SoundCloud.
 
+## 🚀 Automated Internet Deployment
+
+**Get your app live on the internet in 2 minutes with minimal setup!**
+
+### One-Click Deployment (Recommended)
+```bash
+# 1. Get Spotify credentials from: https://developer.spotify.com/dashboard
+# 2. Run one command:
+SPOTIFY_CLIENT_ID=your_id SPOTIFY_CLIENT_SECRET=your_secret npm run deploy:one-click
+```
+
+**What happens automatically:**
+- ✅ Creates GitHub repository
+- ✅ Sets up database (Vercel Postgres)
+- ✅ Deploys to internet (Vercel)
+- ✅ Configures all environment variables
+- ✅ Sets up CI/CD pipeline
+
+### Other Automated Options
+```bash
+npm run deploy:ultra    # Ultra-automated with Railway (5 min)
+npm run deploy         # Full automation with Supabase (10 min)
+```
+
+👉 **See [AUTOMATED_DEPLOYMENT.md](AUTOMATED_DEPLOYMENT.md) for complete guide**
+
 ## Features
 
 - **Spotify Integration**: Connect your Spotify account and import playlists and songs
