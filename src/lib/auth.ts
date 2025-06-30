@@ -16,9 +16,9 @@ const spotifyScopes = [
 ].join(' ')
 
 export const authOptions: NextAuthOptions = {
-  // adapter: PrismaAdapter(prisma), // Temporarily disabled - using JWT sessions
+  adapter: PrismaAdapter(prisma), // Now enabled with proper database setup
   session: {
-    strategy: 'jwt',
+    strategy: 'database', // Using database sessions with Prisma adapter
   },
   providers: [
     SpotifyProvider({
