@@ -14,16 +14,13 @@
     "db:test": "node scripts/test-db-connection.js",
     "db:setup": "node scripts/setup-neon-database.js",
     "db:verify": "./scripts/verify-setup.sh",
-    "setup:vercel-postgres": "./scripts/setup-vercel-postgres.sh",
+
     "type-check": "tsc --noEmit",
-    "deploy": "./scripts/auto-deploy.sh",
-    "deploy:ultra": "./scripts/ultra-auto-deploy.sh",
-    "deploy:one-click": "./scripts/one-click-deploy.sh",
+    
     "deploy:manual": "./scripts/deploy.sh production",
     "deploy:simple": "./scripts/simple-deploy.sh",
-    "health-check": "./scripts/health-check.sh production",
-    "setup:vercel": "./scripts/setup-vercel.sh"
-  },
+          "health-check": "./scripts/health-check.sh production"
+    },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
 

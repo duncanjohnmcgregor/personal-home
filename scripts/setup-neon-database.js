@@ -71,20 +71,7 @@ async function checkNeonCLI() {
   });
 }
 
-async function checkVercelCLI() {
-  return new Promise((resolve) => {
-    const { spawn } = require('child_process');
-    const vercel = spawn('vercel', ['--version'], { stdio: 'pipe' });
-    
-    vercel.on('close', (code) => {
-      resolve(code === 0);
-    });
-    
-    vercel.on('error', () => {
-      resolve(false);
-    });
-  });
-}
+// Removed Vercel CLI check since we're using Neon directly
 
 function showManualSetupInstructions() {
   log('\n📋 Manual Database Setup Instructions', 'bold');
@@ -161,14 +148,12 @@ async function main() {
   }
   
   // Check for CLI tools
-  const hasVercel = await checkVercelCLI();
   const hasNeon = await checkNeonCLI();
   
   log('\n🔍 Checking available tools:', 'blue');
-  log(`   Vercel CLI: ${hasVercel ? '✅ Available' : '❌ Not installed'}`);
-  log(`   Neon CLI: ${hasNeon ? '✅ Available' : '❌ Not available'}`);
+  log(`   Neon CLI: ${hasNeon ? '✅ Available' : '❌ Not available (manual setup required)'}`);
   
-  if (!hasVercel && !hasNeon) {
+  if (!hasNeon) {
     log('\n⚠️  No database CLI tools found. Manual setup required.', 'yellow');
     showManualSetupInstructions();
     showExampleConnectionStrings();
@@ -195,36 +180,9 @@ NODE_ENV=development
     fs.writeFileSync(envPath, templateEnv);
     log('\n✅ Created template .env.local file with secure NEXTAUTH_SECRET', 'green');
     log('📝 Please update the database URLs and Spotify credentials manually', 'yellow');
-    
-  } else if (hasVercel) {
-    log('\n🔧 Vercel CLI detected. You can use Vercel Postgres:', 'green');
-    log('\n📋 Vercel Postgres Setup Steps:', 'yellow');
-    log('1. Run: vercel login');
-    log('2. Run: vercel link (link your project)');
-    log('3. Run: vercel storage create postgres');
-    log('4. Run: vercel env pull .env.local');
-    log('5. Run: npm run db:push');
-    
-    // Create a template for now
-    const templateEnv = `# Application
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=${generateSecureSecret()}
-
-# Neon Postgres Database URLs (These will be populated by 'vercel env pull')
-POSTGRES_URL=
-POSTGRES_PRISMA_URL=
-POSTGRES_URL_NON_POOLING=
-
-# Spotify API (Get these from: https://developer.spotify.com/dashboard)
-SPOTIFY_CLIENT_ID=your-spotify-client-id
-SPOTIFY_CLIENT_SECRET=your-spotify-client-secret
-
-# Optional: For development
-NODE_ENV=development
-`;
-    
-    fs.writeFileSync(envPath, templateEnv);
-    log('✅ Created template .env.local file', 'green');
+  } else {
+    log('\n✅ Neon CLI detected! You can set up the database automatically.', 'green');
+    log('📝 For now, please follow the manual setup instructions above.', 'yellow');
   }
   
   log('\n🎯 Next Steps:', 'bold');
@@ -235,7 +193,7 @@ NODE_ENV=development
   
   log('\n📚 For more help, see:', 'cyan');
   log('   • DATABASE_SETUP_SOLUTION.md');
-  log('   • VERCEL_POSTGRES_SETUP.md');
+  log('   • NEON_DATABASE_SETUP_COMPLETE.md');
   log('   • https://neon.tech/docs/get-started-with-neon/signing-up');
 }
 
