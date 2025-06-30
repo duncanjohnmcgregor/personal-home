@@ -113,14 +113,14 @@
 
 ## Phase 2: Core Features (Priority: High)
 
-### 2.1 Authentication Pages
+### 2.1 Authentication Pages ✅
 **Estimated Time: 2-3 hours**
 **Dependencies: 1.1, 1.4**
-- [ ] Create sign-in page (`src/app/auth/signin/page.tsx`)
-- [ ] Create error page (`src/app/auth/error/page.tsx`)
-- [ ] Implement Spotify connect button
-- [ ] Add loading states and error handling
-- [ ] Style authentication pages with Tailwind
+- [x] Create sign-in page (`src/app/auth/signin/page.tsx`)
+- [x] Create error page (`src/app/auth/error/page.tsx`)
+- [x] Implement Spotify connect button
+- [x] Add loading states and error handling
+- [x] Style authentication pages with Tailwind
 
 ### 2.2 Dashboard Layout & Navigation
 **Estimated Time: 3-4 hours**
