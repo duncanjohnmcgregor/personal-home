@@ -16,7 +16,10 @@ const spotifyScopes = [
 ].join(' ')
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // adapter: PrismaAdapter(prisma), // Temporarily disabled - using JWT sessions
+  session: {
+    strategy: 'jwt',
+  },
   providers: [
     SpotifyProvider({
       clientId: process.env.SPOTIFY_CLIENT_ID!,
