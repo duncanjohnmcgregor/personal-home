@@ -50,7 +50,7 @@ jobs:
       env:
         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       run: |
-        vercel link --yes
+        vercel link --yes --token ${{ secrets.VERCEL_TOKEN }}
 
     - name: Pull environment variables
       env:
