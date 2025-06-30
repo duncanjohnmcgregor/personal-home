@@ -15,12 +15,34 @@ const spotifyScopes = [
   'user-library-modify',
 ].join(' ')
 
+// Check for required environment variables
+const spotifyClientId = process.env.SPOTIFY_CLIENT_ID
+const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET
+const nextAuthSecret = process.env.NEXTAUTH_SECRET
+const nextAuthUrl = process.env.NEXTAUTH_URL
+
+// Log configuration issues in development
+if (process.env.NODE_ENV === 'development') {
+  if (!spotifyClientId) {
+    console.error('❌ SPOTIFY_CLIENT_ID is not set in environment variables')
+  }
+  if (!spotifyClientSecret) {
+    console.error('❌ SPOTIFY_CLIENT_SECRET is not set in environment variables')
+  }
+  if (!nextAuthSecret) {
+    console.error('❌ NEXTAUTH_SECRET is not set in environment variables')
+  }
+  if (!nextAuthUrl) {
+    console.error('❌ NEXTAUTH_URL is not set in environment variables')
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     SpotifyProvider({
-      clientId: process.env.SPOTIFY_CLIENT_ID!,
-      clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
+      clientId: spotifyClientId!,
+      clientSecret: spotifyClientSecret!,
       authorization: {
         params: {
           scope: spotifyScopes,
@@ -40,6 +62,7 @@ export const authOptions: NextAuthOptions = {
         if (account?.provider === 'spotify' && account?.access_token) {
           return true
         }
+        console.error('Sign-in failed: Missing account or access token')
         return false
       } catch (error) {
         console.error('Sign-in error:', error)
@@ -69,4 +92,5 @@ export const authOptions: NextAuthOptions = {
       return baseUrl
     },
   },
+  debug: process.env.NODE_ENV === 'development',
 }

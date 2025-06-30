@@ -37,16 +37,25 @@ export default function SignInContent() {
         if (errorParam) {
           switch (errorParam) {
             case 'AccessDenied':
-              setError('Access was denied. Please make sure you approve the Spotify permissions.')
+              setError('Access was denied. Please make sure you approve the Spotify permissions when prompted.')
               break
             case 'Configuration':
-              setError('There was a configuration error. Please try again.')
+              setError('There was a configuration error. This may be due to missing Spotify app credentials.')
               break
             case 'Verification':
               setError('Unable to verify your account. Please try signing in again.')
               break
+            case 'OAuthSignin':
+              setError('OAuth sign-in error. Please check your Spotify app configuration.')
+              break
+            case 'OAuthCallback':
+              setError('OAuth callback error. Please verify your redirect URLs are correctly configured.')
+              break
+            case 'Callback':
+              setError('Authentication callback failed. Please try again.')
+              break
             default:
-              setError('An authentication error occurred. Please try again.')
+              setError(`An authentication error occurred: ${errorParam}. Please try again.`)
           }
         }
       } catch (err) {
