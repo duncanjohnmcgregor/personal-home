@@ -122,19 +122,19 @@
 - [x] Add loading states and error handling
 - [x] Style authentication pages with Tailwind
 
-### 2.2 Dashboard Layout & Navigation
+### 2.2 Dashboard Layout & Navigation ✅
 **Estimated Time: 3-4 hours**
 **Dependencies: 1.4, 2.1**
-- [ ] Create dashboard layout (`src/app/dashboard/layout.tsx`)
-- [ ] Implement navigation sidebar with menu items:
-  - [ ] Dashboard overview
-  - [ ] My Playlists
-  - [ ] Import from Spotify
-  - [ ] Connect Platforms
-  - [ ] Purchase History
-- [ ] Create dashboard home page (`src/app/dashboard/page.tsx`)
-- [ ] Add user profile dropdown with logout
-- [ ] Implement responsive design for mobile
+- [x] Create dashboard layout (`src/app/dashboard/layout.tsx`)
+- [x] Implement navigation sidebar with menu items:
+  - [x] Dashboard overview
+  - [x] My Playlists
+  - [x] Import from Spotify
+  - [x] Connect Platforms
+  - [x] Purchase History
+- [x] Create dashboard home page (`src/app/dashboard/page.tsx`)
+- [x] Add user profile dropdown with logout
+- [x] Implement responsive design for mobile
 
 ### 2.3 Playlist Management Core
 **Estimated Time: 4-5 hours**
