@@ -28,7 +28,24 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Add custom sign-in validation here if needed
+      try {
+        // Ensure we have a valid Spotify account
+        if (account?.provider === 'spotify' && account?.access_token) {
+          return true
+        }
+        return false
+      } catch (error) {
+        console.error('Sign-in error:', error)
+        return false
+      }
+    },
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id
@@ -41,6 +58,15 @@ export const authOptions: NextAuthOptions = {
         token.refreshToken = account.refresh_token
       }
       return token
+    },
+    async redirect({ url, baseUrl }) {
+      // Handle redirects after authentication
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`
+      } else if (new URL(url).origin === baseUrl) {
+        return url
+      }
+      return baseUrl
     },
   },
 }

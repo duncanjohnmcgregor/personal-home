@@ -118,6 +118,7 @@ async function getSpotifyAccessToken(): Promise<string | null> {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
+      console.warn('No valid session found for Spotify access token')
       return null
     }
 
@@ -129,6 +130,7 @@ async function getSpotifyAccessToken(): Promise<string | null> {
     })
 
     if (!account?.access_token || !account?.refresh_token) {
+      console.warn('No Spotify account tokens found for user:', session.user.id)
       return null
     }
 
@@ -138,6 +140,7 @@ async function getSpotifyAccessToken(): Promise<string | null> {
     const shouldRefresh = tokenExpiresAt.getTime() - now.getTime() < 5 * 60 * 1000 // Refresh 5 minutes early
 
     if (shouldRefresh) {
+      console.log('Refreshing Spotify token for user:', session.user.id)
       const newAccessToken = await refreshSpotifyToken(account.refresh_token)
       if (newAccessToken) {
         // Update the token in the database
@@ -149,6 +152,10 @@ async function getSpotifyAccessToken(): Promise<string | null> {
           },
         })
         return newAccessToken
+      } else {
+        console.error('Failed to refresh Spotify token for user:', session.user.id)
+        // Token refresh failed - user may need to re-authenticate
+        return null
       }
     }
 
