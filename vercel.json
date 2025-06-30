@@ -3,6 +3,7 @@
   "devCommand": "npm run dev",
   "installCommand": "npm ci",
   "framework": "nextjs",
+  "outputDirectory": ".next",
   "git": {
     "deploymentEnabled": {
       "main": true
