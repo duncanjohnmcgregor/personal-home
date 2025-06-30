@@ -3,6 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches: [ main ]
+  workflow_dispatch: # Allow manual deployment
 
 jobs:
   deploy:
@@ -29,27 +30,29 @@ jobs:
       run: |
         npm run type-check
         npm run lint
-        npm run build
+
+    - name: Test build
+      run: npm run build
 
     - name: Deploy to Vercel
-      uses: amondnet/vercel-action@v25
+      uses: vercel/action@v1
       with:
         vercel-token: ${{ secrets.VERCEL_TOKEN }}
         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
         vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
         vercel-args: '--prod'
-        working-directory: ./
 
     - name: Run post-deployment health check
       run: |
-        sleep 30
-        curl -f ${{ secrets.PRODUCTION_URL }}/api/health || exit 1
+        sleep 45
+        curl -f https://${{ secrets.VERCEL_PROJECT_NAME }}.vercel.app/api/health || exit 1
 
     - name: Notify deployment status
       if: always()
       run: |
         if [ "${{ job.status }}" == "success" ]; then
-          echo "✅ Production deployment successful"
+          echo "✅ Production deployment successful to https://${{ secrets.VERCEL_PROJECT_NAME }}.vercel.app"
         else
           echo "❌ Production deployment failed"
+          exit 1
         fi
