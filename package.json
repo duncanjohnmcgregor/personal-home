@@ -17,7 +17,8 @@
     "deploy:one-click": "./scripts/one-click-deploy.sh",
     "deploy:manual": "./scripts/deploy.sh production",
     "deploy:simple": "./scripts/simple-deploy.sh",
-    "health-check": "./scripts/health-check.sh production"
+    "health-check": "./scripts/health-check.sh production",
+    "setup:vercel": "./scripts/setup-vercel.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
