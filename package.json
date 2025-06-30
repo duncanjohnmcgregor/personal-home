@@ -16,6 +16,7 @@
     "deploy:ultra": "./scripts/ultra-auto-deploy.sh",
     "deploy:one-click": "./scripts/one-click-deploy.sh",
     "deploy:manual": "./scripts/deploy.sh production",
+    "deploy:simple": "./scripts/simple-deploy.sh",
     "health-check": "./scripts/health-check.sh production"
   },
   "dependencies": {

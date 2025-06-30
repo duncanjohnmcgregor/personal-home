@@ -52,23 +52,19 @@ fi
 PROJECT_NAME="music-playlist-$(date +%s)"
 gh repo create $PROJECT_NAME --public --source=. --remote=origin --push || true
 
-# Deploy to Vercel
-echo "🚀 Deploying to Vercel..."
-vercel --yes --name $PROJECT_NAME
-
 # Set environment variables
 DEPLOYMENT_URL="https://$PROJECT_NAME.vercel.app"
-vercel env add NEXTAUTH_URL production <<< "$DEPLOYMENT_URL"
-vercel env add NEXTAUTH_SECRET production <<< "$NEXTAUTH_SECRET"
-vercel env add SPOTIFY_CLIENT_ID production <<< "$SPOTIFY_CLIENT_ID"
-vercel env add SPOTIFY_CLIENT_SECRET production <<< "$SPOTIFY_CLIENT_SECRET"
+echo "$DEPLOYMENT_URL" | vercel env add NEXTAUTH_URL production --force
+echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET production --force
+echo "$SPOTIFY_CLIENT_ID" | vercel env add SPOTIFY_CLIENT_ID production --force
+echo "$SPOTIFY_CLIENT_SECRET" | vercel env add SPOTIFY_CLIENT_SECRET production --force
 
 # Use Vercel Postgres (automatic database)
 echo "📊 Setting up Vercel Postgres..."
 vercel postgres create --name "$PROJECT_NAME-db"
 DB_URL=$(vercel env ls | grep POSTGRES_URL | head -1 | awk '{print $2}')
 if [ -n "$DB_URL" ]; then
-    vercel env add DATABASE_URL production <<< "$DB_URL"
+    echo "$DB_URL" | vercel env add DATABASE_URL production --force
 fi
 
 # Deploy to production

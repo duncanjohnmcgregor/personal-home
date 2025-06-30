@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from 'next/server'
 import { SpotifyService } from '@/lib/spotify'
 import { getServerSession } from 'next-auth'
