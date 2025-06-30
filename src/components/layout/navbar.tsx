@@ -82,7 +82,7 @@ export function Navbar() {
 
           {/* Sign in button for unauthenticated users */}
           {!session && (
-            <Link href="/auth/signin">
+                              <Link href="/api/auth/signin">
               <Button>Sign In</Button>
             </Link>
           )}
