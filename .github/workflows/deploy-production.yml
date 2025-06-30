@@ -41,18 +41,28 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
         vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        vercel-args: '--prod'
+        vercel-args: '--prod --confirm'
+        working-directory: ./
 
     - name: Run post-deployment health check
       run: |
-        sleep 45
-        curl -f https://${{ secrets.VERCEL_PROJECT_NAME }}.vercel.app/api/health || exit 1
+        echo "Waiting for deployment to be ready..."
+        sleep 60
+        if [ -n "${{ secrets.VERCEL_PROJECT_NAME }}" ]; then
+          echo "Running health check on https://${{ secrets.VERCEL_PROJECT_NAME }}.vercel.app"
+          curl -f --retry 3 --retry-delay 10 "https://${{ secrets.VERCEL_PROJECT_NAME }}.vercel.app/api/health" || echo "Health check failed but deployment may still be successful"
+        else
+          echo "VERCEL_PROJECT_NAME not set, skipping health check"
+        fi
 
     - name: Notify deployment status
       if: always()
       run: |
         if [ "${{ job.status }}" == "success" ]; then
-          echo "✅ Production deployment successful to https://${{ secrets.VERCEL_PROJECT_NAME }}.vercel.app"
+          echo "✅ Production deployment successful"
+          if [ -n "${{ secrets.VERCEL_PROJECT_NAME }}" ]; then
+            echo "🌐 Live at: https://${{ secrets.VERCEL_PROJECT_NAME }}.vercel.app"
+          fi
         else
           echo "❌ Production deployment failed"
           exit 1

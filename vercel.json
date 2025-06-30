@@ -3,6 +3,11 @@
   "devCommand": "npm run dev",
   "installCommand": "npm ci",
   "framework": "nextjs",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30
