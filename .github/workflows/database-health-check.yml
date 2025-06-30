@@ -47,13 +47,16 @@ jobs:
       run: npm i -g vercel@latest
 
     - name: Authenticate with Vercel
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       run: |
-        vercel login --token ${{ secrets.VERCEL_TOKEN }}
-        vercel link --yes --token ${{ secrets.VERCEL_TOKEN }}
+        vercel link --yes
 
     - name: Pull environment variables
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       run: |
-        vercel env pull .env.production --token ${{ secrets.VERCEL_TOKEN }}
+        vercel env pull .env.production
 
     - name: Generate Prisma Client
       run: npm run db:generate
