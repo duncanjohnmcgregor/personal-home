@@ -52,15 +52,18 @@ jobs:
       run: npm i -g vercel@latest
 
     - name: Authenticate with Vercel
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       run: |
-        echo "${{ secrets.VERCEL_TOKEN }}" | vercel login --stdin
-        vercel link --yes --token ${{ secrets.VERCEL_TOKEN }}
+        vercel link --yes
 
     - name: Check if database exists
       id: check-db
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       run: |
         # Check if database storage exists
-        DB_EXISTS=$(vercel storage ls --token ${{ secrets.VERCEL_TOKEN }} | grep -c "postgres" || echo "0")
+        DB_EXISTS=$(vercel storage ls | grep -c "postgres" || echo "0")
         
         if [ "$DB_EXISTS" -gt 0 ]; then
           echo "database-exists=true" >> $GITHUB_OUTPUT
@@ -72,14 +75,15 @@ jobs:
 
     - name: Create Vercel Postgres Database
       if: steps.check-db.outputs.database-exists == 'false' || github.event.inputs.force_db_reset == 'true'
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       run: |
         echo "🚀 Creating Vercel Postgres database..."
         
         # Create database with optimal settings
         vercel storage create postgres \
           --name "music-playlist-db-${{ github.event.inputs.environment || 'staging' }}" \
-          --region "us-east-1" \
-          --token ${{ secrets.VERCEL_TOKEN }}
+          --region "us-east-1"
         
         echo "✅ Database created successfully"
         
@@ -87,9 +91,11 @@ jobs:
         sleep 30
 
     - name: Pull environment variables
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       run: |
         echo "📥 Pulling environment variables from Vercel..."
-        vercel env pull .env.production --token ${{ secrets.VERCEL_TOKEN }}
+        vercel env pull .env.production
         
         # Verify required variables exist
         if ! grep -q "POSTGRES_URL" .env.production; then
@@ -100,15 +106,17 @@ jobs:
         echo "✅ Environment variables pulled successfully"
 
     - name: Setup additional environment variables
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       run: |
         echo "🔧 Setting up additional required environment variables..."
         
         # Generate NEXTAUTH_SECRET if not exists
-        if ! vercel env ls --token ${{ secrets.VERCEL_TOKEN }} | grep -q "NEXTAUTH_SECRET"; then
+        if ! vercel env ls | grep -q "NEXTAUTH_SECRET"; then
           NEXTAUTH_SECRET=$(openssl rand -base64 32)
-          echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET production --token ${{ secrets.VERCEL_TOKEN }}
-          echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET preview --token ${{ secrets.VERCEL_TOKEN }}
-          echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET development --token ${{ secrets.VERCEL_TOKEN }}
+          echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET production
+          echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET preview
+          echo "$NEXTAUTH_SECRET" | vercel env add NEXTAUTH_SECRET development
           echo "✅ NEXTAUTH_SECRET generated and set"
         fi
         
@@ -119,18 +127,18 @@ jobs:
           NEXTAUTH_URL="https://${{ secrets.STAGING_DOMAIN || 'music-playlist-manager-staging.vercel.app' }}"
         fi
         
-        echo "$NEXTAUTH_URL" | vercel env add NEXTAUTH_URL production --token ${{ secrets.VERCEL_TOKEN }} --force
-        echo "$NEXTAUTH_URL" | vercel env add NEXTAUTH_URL preview --token ${{ secrets.VERCEL_TOKEN }} --force
+        echo "$NEXTAUTH_URL" | vercel env add NEXTAUTH_URL production --force
+        echo "$NEXTAUTH_URL" | vercel env add NEXTAUTH_URL preview --force
         
         # Set Spotify credentials if provided
         if [ -n "${{ secrets.SPOTIFY_CLIENT_ID }}" ]; then
-          echo "${{ secrets.SPOTIFY_CLIENT_ID }}" | vercel env add SPOTIFY_CLIENT_ID production --token ${{ secrets.VERCEL_TOKEN }} --force
-          echo "${{ secrets.SPOTIFY_CLIENT_ID }}" | vercel env add SPOTIFY_CLIENT_ID preview --token ${{ secrets.VERCEL_TOKEN }} --force
+          echo "${{ secrets.SPOTIFY_CLIENT_ID }}" | vercel env add SPOTIFY_CLIENT_ID production --force
+          echo "${{ secrets.SPOTIFY_CLIENT_ID }}" | vercel env add SPOTIFY_CLIENT_ID preview --force
         fi
         
         if [ -n "${{ secrets.SPOTIFY_CLIENT_SECRET }}" ]; then
-          echo "${{ secrets.SPOTIFY_CLIENT_SECRET }}" | vercel env add SPOTIFY_CLIENT_SECRET production --token ${{ secrets.VERCEL_TOKEN }} --force
-          echo "${{ secrets.SPOTIFY_CLIENT_SECRET }}" | vercel env add SPOTIFY_CLIENT_SECRET preview --token ${{ secrets.VERCEL_TOKEN }} --force
+          echo "${{ secrets.SPOTIFY_CLIENT_SECRET }}" | vercel env add SPOTIFY_CLIENT_SECRET production --force
+          echo "${{ secrets.SPOTIFY_CLIENT_SECRET }}" | vercel env add SPOTIFY_CLIENT_SECRET preview --force
         fi
 
     - name: Generate Prisma Client
@@ -188,13 +196,15 @@ jobs:
 
     - name: Deploy to Vercel
       id: deploy
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       run: |
         echo "🚀 Deploying to Vercel..."
         
         if [ "${{ github.event.inputs.environment || 'staging' }}" = "production" ]; then
-          DEPLOYMENT_URL=$(vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes)
+          DEPLOYMENT_URL=$(vercel --prod --yes)
         else
-          DEPLOYMENT_URL=$(vercel --token ${{ secrets.VERCEL_TOKEN }} --yes)
+          DEPLOYMENT_URL=$(vercel --yes)
         fi
         
         echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
