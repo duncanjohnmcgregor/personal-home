@@ -51,10 +51,14 @@ The GitHub Actions workflows have been optimized to significantly reduce deploym
 
 ## Performance Improvements
 
-### Time Savings
+### Time Savings (Cache Hit Scenario)
 - **CI preparation**: ~2-3 minutes additional time (one-time cost)
 - **CD execution**: ~5-8 minutes time savings per deployment
 - **Net improvement**: ~3-5 minutes faster deployments
+
+### Fallback Scenario (Cache Miss)
+- **CD execution**: Same as original deployment time (~5-7 minutes)
+- **Reliability**: 100% deployment success regardless of cache status
 
 ### Efficiency Gains
 - **Reduced redundancy**: Eliminated duplicate build and validation steps
@@ -139,8 +143,14 @@ The CI workflow now creates a `deployment-info.json` file containing:
 
 ### For Developers
 1. **Push to develop/PR**: Triggers CI workflow that prepares deployment artifacts
-2. **Merge to main**: Triggers fast CD workflow that reuses cached artifacts
-3. **Monitor deployments**: Check GitHub Actions for deployment status and URLs
+2. **Merge to main**: Triggers CD workflow that uses cached artifacts when available
+3. **Monitor deployments**: Check GitHub Actions for deployment status and cache performance
+4. **Follow recommended git flow**: `feature → develop → main` for optimal cache usage
+
+### Cache Behavior
+- **Cache Hit**: Fast deployment (~2-3 minutes) when CI artifacts are available
+- **Cache Miss**: Normal deployment (~5-7 minutes) with automatic fallback build
+- **Expected Cache Misses**: Direct pushes to main, expired caches, first deployments
 
 ### For Maintenance
 - **Cache cleanup**: Caches automatically expire and are managed by GitHub

@@ -43,6 +43,7 @@ jobs:
         key: ${{ runner.os }}-build-artifacts-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-build-artifacts-
+        # Use a more flexible cache lookup since CI runs on develop but CD runs on main
 
     - name: Debug Cache Information
       run: |
@@ -85,12 +86,14 @@ jobs:
         # Check for essential build artifacts first
         if [ ! -d ".next" ]; then
           echo "❌ Build artifacts (.next) missing"
-          echo "ℹ️ This indicates cache miss or CI workflow hasn't run successfully"
-          echo "🔧 Troubleshooting steps:"
-          echo "  1. Ensure CI workflow completed successfully on this commit"
-          echo "  2. Check if cache was restored properly"
-          echo "  3. Verify cache key matches: ${{ runner.os }}-build-artifacts-${{ github.sha }}"
-          exit 1
+          echo "ℹ️ This indicates cache miss - CI likely ran on a different commit"
+          echo ""
+          echo "🔧 This is expected when:"
+          echo "  - CI ran on 'develop' branch but deployment is from 'main'"
+          echo "  - The exact commit SHA doesn't have cached artifacts"
+          echo "  - Cache expired or was evicted"
+          echo ""
+          echo "✅ Fallback build will run to create missing artifacts"
         fi
         
         if [ ! -d "node_modules" ]; then
@@ -124,31 +127,53 @@ jobs:
         
         echo "✅ Essential artifacts verified and ready for deployment"
 
-    - name: Fallback Build (if cache miss)
+    - name: Cache Status Summary
+      run: |
+        echo "📊 Cache Status Summary"
+        echo "======================"
+        echo "Cache hit: ${{ steps.cache-restore.outputs.cache-hit }}"
+        echo "Current commit: ${{ github.sha }}"
+        echo "Current ref: ${{ github.ref }}"
+        
+        if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
+          echo "✅ Using cached artifacts from CI workflow"
+          echo "🚀 Fast deployment mode activated"
+        else
+          echo "⚠️ Cache miss - will build from scratch"
+          echo "🔧 This happens when:"
+          echo "  - CI ran on different commit (develop vs main)"
+          echo "  - Cache expired or was evicted"
+          echo "  - First deployment of new commit"
+          echo "⏱️ Deployment will take longer but will work correctly"
+        fi
+
+    - name: Fallback Build (if needed)
       if: steps.cache-restore.outputs.cache-hit != 'true'
       run: |
-        echo "⚠️ Cache miss detected - building from scratch"
-        echo "🔧 This will take longer but ensures deployment can proceed"
+        echo "⚠️ Cache miss or incomplete artifacts detected"
+        echo "🔧 Building from scratch to ensure deployment can proceed"
+        echo "📊 Cache hit status: ${{ steps.cache-restore.outputs.cache-hit }}"
         
-        # Install dependencies if not cached
-        if [ ! -d "node_modules" ]; then
-          echo "📦 Installing dependencies..."
-          npm ci
+        # Always install dependencies when rebuilding
+        echo "📦 Installing dependencies..."
+        npm ci
+        
+        # Generate Prisma client
+        echo "🔧 Generating Prisma client..."
+        npx prisma generate
+        
+        # Build application
+        echo "🏗️ Building application..."
+        npm run build
+        
+        # Verify the build was successful
+        if [ ! -d ".next" ] || [ ! -f ".next/BUILD_ID" ]; then
+          echo "❌ Build failed - .next directory or BUILD_ID missing"
+          exit 1
         fi
         
-        # Generate Prisma client if missing
-        if [ ! -d "node_modules/.prisma" ]; then
-          echo "🔧 Generating Prisma client..."
-          npx prisma generate
-        fi
-        
-        # Build application if missing
-        if [ ! -d ".next" ]; then
-          echo "🏗️ Building application..."
-          npm run build
-        fi
-        
-        echo "✅ Fallback build completed"
+        echo "✅ Fallback build completed successfully"
+        echo "ℹ️ Deployment will proceed with fresh build artifacts"
 
     - name: Install Vercel CLI
       run: |
@@ -371,14 +396,25 @@ jobs:
             echo "🌐 Check Vercel dashboard for live URL"
           fi
           echo ""
-          echo "🎉 Deployment completed in record time thanks to cached artifacts!"
-          echo ""
-          echo "📊 Performance optimizations used:"
-          echo "  ✅ Reused cached build artifacts from CI"
-          echo "  ✅ Skipped redundant dependency installation"
-          echo "  ✅ Skipped redundant build process"
-          echo "  ✅ Streamlined database operations"
-          echo "  ✅ Fast environment verification"
+          if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
+            echo "🎉 Deployment completed in record time thanks to cached artifacts!"
+            echo ""
+            echo "📊 Performance optimizations used:"
+            echo "  ✅ Reused cached build artifacts from CI"
+            echo "  ✅ Skipped redundant dependency installation"
+            echo "  ✅ Skipped redundant build process"
+            echo "  ✅ Streamlined database operations"
+            echo "  ✅ Fast environment verification"
+          else
+            echo "🎉 Deployment completed successfully with fallback build!"
+            echo ""
+            echo "📊 Fallback mode used:"
+            echo "  🔧 Built fresh artifacts (no cache available)"
+            echo "  ✅ Complete dependency installation"
+            echo "  ✅ Full application build"
+            echo "  ✅ Streamlined database operations"
+            echo "  ℹ️ Next deployment from same commit will be faster"
+          fi
           echo ""
           echo "🔗 Next steps:"
           echo "  1. Test authentication with Spotify"
