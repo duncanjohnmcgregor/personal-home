@@ -170,23 +170,23 @@ export default function PlaylistsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-content">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">My Playlists</h1>
-          <p className="text-muted-foreground mt-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 header-mobile">
+        <div className="text-content-mobile">
+          <h1 className="text-2xl sm:text-3xl font-bold">My Playlists</h1>
+          <p className="text-muted-foreground">
             Manage your music collections
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={() => setShowForm(true)} className="sm:flex-shrink-0">
           <Plus className="h-4 w-4 mr-2" />
           New Playlist
         </Button>
       </div>
 
       {/* Filters and Search */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="button-group-mobile">
         <div className="flex-1">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />

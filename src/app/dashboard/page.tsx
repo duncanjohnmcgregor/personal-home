@@ -39,12 +39,12 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-        <div className="text-center py-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+    <div className="page-content">
+        <div className="text-center py-6 sm:py-8 header-mobile">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
             Welcome to Your Music Dashboard
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-lg sm:text-xl text-gray-600">
             {connectedProviders.length > 0 
               ? `Connected to ${connectedProviders.length} platform${connectedProviders.length > 1 ? 's' : ''}!`
               : 'Connect your music platforms to get started'
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
 
         {/* Connected Platforms */}
         {connectedProviders.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-mobile md:grid-cols-2 lg:grid-cols-3">
             {connectedProviders.map((provider) => {
               const providerInfo = getProviderInfo(provider)
               return (
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
           </Card>
         )}
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-mobile md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader>
               <CardTitle>My Playlists</CardTitle>

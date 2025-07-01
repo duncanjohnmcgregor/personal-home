@@ -69,12 +69,12 @@ export default async function ConnectPlatformsPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+    <div className="page-content">
+      <div className="text-center header-mobile">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
           Connect Platforms
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="text-base sm:text-lg text-gray-600">
           Connect your music platforms to access more content and features
         </p>
       </div>
@@ -127,7 +127,7 @@ export default async function ConnectPlatformsPage() {
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           {connectedProviders.length === 0 ? 'Available Platforms' : 'Connect More Platforms'}
         </h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-mobile md:grid-cols-2 lg:grid-cols-3">
           {allPlatforms
             .filter(platform => !connectedProviders.includes(platform.id))
             .map((platform) => (

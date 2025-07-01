@@ -24,6 +24,15 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+    
+    /* Mobile spacing variables */
+    --mobile-padding: 1rem; /* 16px */
+    --mobile-padding-sm: 0.75rem; /* 12px */
+    --mobile-padding-lg: 1.25rem; /* 20px */
+    --mobile-gap: 1rem; /* 16px */
+    --mobile-gap-sm: 0.75rem; /* 12px */
+    --mobile-gap-lg: 1.5rem; /* 24px */
+    --mobile-nav-height: 5rem; /* 80px */
   }
 
   .dark {
@@ -55,5 +64,53 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Mobile-first responsive utilities */
+@layer utilities {
+  /* Container spacing - mobile first */
+  .container-mobile {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Page content spacing */
+  .page-content {
+    @apply space-y-4 sm:space-y-6 lg:space-y-8;
+  }
+  
+  /* Card spacing - consistent across all screen sizes */
+  .card-mobile {
+    @apply p-4 sm:p-6;
+  }
+  
+  /* Grid responsive spacing */
+  .grid-mobile {
+    @apply gap-4 sm:gap-6;
+  }
+  
+  /* Mobile navigation safe area */
+  .mobile-safe-bottom {
+    @apply pb-20 lg:pb-0;
+  }
+  
+  /* Header spacing */
+  .header-mobile {
+    @apply mb-4 sm:mb-6 lg:mb-8;
+  }
+  
+  /* Form spacing */
+  .form-mobile {
+    @apply space-y-3 sm:space-y-4;
+  }
+  
+  /* Button group spacing */
+  .button-group-mobile {
+    @apply flex flex-col sm:flex-row gap-2 sm:gap-4;
+  }
+  
+  /* Text content spacing */
+  .text-content-mobile {
+    @apply space-y-2 sm:space-y-3;
   }
 }

@@ -30,7 +30,7 @@ export default async function DashboardLayout({
         
         {/* Main Content */}
         <main className="flex-1 lg:ml-64">
-          <div className="container mx-auto p-4 lg:p-6">
+          <div className="container-mobile mx-auto py-4 lg:py-6 mobile-safe-bottom">
             {children}
           </div>
         </main>
@@ -38,9 +38,6 @@ export default async function DashboardLayout({
       
       {/* Mobile Navigation */}
       <MobileNavigation />
-      
-      {/* Add padding bottom on mobile to account for bottom navigation */}
-      <div className="lg:hidden h-20" />
     </div>
   )
 }

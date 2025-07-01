@@ -368,28 +368,28 @@ export default function SpotifyImportPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Import from Spotify</h1>
-          <p className="text-muted-foreground mt-2">
+    <div className="page-content">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 header-mobile">
+        <div className="text-content-mobile">
+          <h1 className="text-2xl sm:text-3xl font-bold">Import from Spotify</h1>
+          <p className="text-muted-foreground">
             Import your Spotify playlists and songs to your music library
           </p>
         </div>
-        <Button onClick={fetchSpotifyPlaylists} disabled={loading}>
+        <Button onClick={fetchSpotifyPlaylists} disabled={loading} className="sm:flex-shrink-0">
           <Search className="w-4 h-4 mr-2" />
           Refresh
         </Button>
       </div>
 
-      <Tabs defaultValue="playlists" className="space-y-6">
+      <Tabs defaultValue="playlists" className="page-content">
         <TabsList>
           <TabsTrigger value="playlists">Your Playlists</TabsTrigger>
           <TabsTrigger value="progress">Current Import</TabsTrigger>
           <TabsTrigger value="history">Previous Imports</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="playlists" className="space-y-6">
+        <TabsContent value="playlists" className="page-content">
           {/* Search and Selection Controls */}
           <Card>
             <CardHeader>
@@ -466,7 +466,7 @@ export default function SpotifyImportPage() {
               description={searchQuery ? "No playlists match your search." : "You don't have any Spotify playlists."}
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-mobile">
               {filteredPlaylists.map((playlist) => (
                 <SpotifyPlaylistCard
                   key={playlist.id}
@@ -480,7 +480,7 @@ export default function SpotifyImportPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="progress" className="space-y-6">
+        <TabsContent value="progress" className="page-content">
           <Card>
             <CardHeader>
               <CardTitle>Current Import Progress</CardTitle>
@@ -506,7 +506,7 @@ export default function SpotifyImportPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-6">
+        <TabsContent value="history" className="page-content">
           <Card>
             <CardHeader>
               <CardTitle>Previous Imports</CardTitle>
