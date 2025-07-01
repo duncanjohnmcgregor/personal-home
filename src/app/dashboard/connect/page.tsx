@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ExternalLink, Music, ShoppingCart, Users, Zap } from 'lucide-react'
+import { ConnectButton } from '@/components/connect-button'
 
 export default async function ConnectPlatformsPage() {
   const session = await getServerSession(authOptions)
@@ -33,21 +34,18 @@ export default async function ConnectPlatformsPage() {
       description: 'Connect to SoundCloud to discover independent artists and tracks',
       icon: '☁️',
       color: 'bg-orange-600',
-      status: 'coming_soon',
+      status: 'available',
       features: [
         'Discover independent artists',
         'Stream tracks and playlists',
         'Access user-generated content',
         'Follow artists and creators'
       ],
-      comingSoon: true
+      comingSoon: false
     }
   ]
 
-  const handleConnect = (platformName: string) => {
-    // This will be implemented when the OAuth flows are set up
-    console.log(`Connecting to ${platformName}...`)
-  }
+
 
   return (
     <div className="space-y-6">
@@ -135,24 +133,10 @@ export default async function ConnectPlatformsPage() {
                 </div>
                 
                 <div className="pt-4 border-t">
-                  {platform.comingSoon ? (
-                    <Button 
-                      disabled 
-                      className="w-full"
-                      variant="outline"
-                    >
-                      <Users className="w-4 h-4 mr-2" />
-                      Coming Soon
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={() => handleConnect(platform.name)}
-                      className="w-full"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Connect {platform.name}
-                    </Button>
-                  )}
+                  <ConnectButton 
+                    platformName={platform.name}
+                    comingSoon={platform.comingSoon}
+                  />
                 </div>
               </CardContent>
             </Card>
