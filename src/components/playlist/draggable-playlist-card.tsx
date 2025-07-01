@@ -45,7 +45,7 @@ export function DraggablePlaylistCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'relative group',
+        'relative group drag-chrome-fix',
         isCurrentlyDragging && 'z-50 opacity-50',
         isReordering && 'cursor-grab active:cursor-grabbing'
       )}
@@ -56,7 +56,7 @@ export function DraggablePlaylistCard({
           {...attributes}
           {...listeners}
           className={cn(
-            'absolute top-2 left-2 z-10 p-1 rounded bg-background/80 backdrop-blur-sm border shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing',
+            'absolute top-2 left-2 z-10 p-1 rounded bg-background/80 backdrop-blur-sm border shadow-sm opacity-0 group-hover:opacity-100 transition-opacity drag-handle-chrome-fix',
             viewMode === 'list' && 'top-1/2 -translate-y-1/2'
           )}
         >

@@ -6,6 +6,8 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
+  MouseSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -54,12 +56,28 @@ export function DraggableSongList({
     setItems(sortedSongs)
   }, [songs])
 
+  // Enhanced sensor configuration for better Chrome compatibility
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    // Mouse sensor with different activation constraint for Chrome
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5, // Reduced from 8 to 5 for better Chrome response
       },
     }),
+    // Touch sensor as fallback for touch devices and Chrome touch emulation
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    // Pointer sensor with adjusted settings for Chrome
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Reduced from 8 to 5 for better Chrome response
+      },
+    }),
+    // Keyboard sensor for accessibility
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
