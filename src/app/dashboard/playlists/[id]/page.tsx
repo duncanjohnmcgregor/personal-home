@@ -16,6 +16,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ErrorMessage } from '@/components/ui/error-message'
 import { SongList } from '@/components/playlist/song-list'
 import { PlaylistForm } from '@/components/playlist/playlist-form'
+import { AddSongsDialog } from '@/components/search/add-songs-dialog'
 import { usePlaylist } from '@/lib/hooks/use-playlists'
 import { usePlaylists } from '@/lib/hooks/use-playlists'
 import { Playlist, UpdatePlaylistData, PlaylistSong, RemoveSongFromPlaylistData } from '@/types/playlist'
@@ -33,6 +34,7 @@ export default function PlaylistDetailPage() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentSong, setCurrentSong] = useState<string | null>(null)
   const [showEditForm, setShowEditForm] = useState(false)
+  const [showAddSongs, setShowAddSongs] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
 
   // Fetch playlist on mount
@@ -281,7 +283,7 @@ export default function PlaylistDetailPage() {
               {isPlaying ? 'Pause' : 'Play'}
             </Button>
 
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setShowAddSongs(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Songs
             </Button>
@@ -306,6 +308,14 @@ export default function PlaylistDetailPage() {
         playlist={playlist}
         onSubmit={handleUpdatePlaylist}
         isSubmitting={isUpdating}
+      />
+
+      {/* Add Songs Dialog */}
+      <AddSongsDialog
+        open={showAddSongs}
+        onOpenChange={setShowAddSongs}
+        playlistId={playlist.id}
+        playlistName={playlist.name}
       />
     </div>
   )
