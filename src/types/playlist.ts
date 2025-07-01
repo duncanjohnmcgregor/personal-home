@@ -32,6 +32,7 @@ export interface Playlist {
   userId: string
   spotifyId?: string
   isPublic: boolean
+  categoryId?: string
   createdAt: Date
   updatedAt: Date
   songs: PlaylistSong[]
@@ -60,6 +61,7 @@ export interface UpdatePlaylistData {
   name?: string
   description?: string
   isPublic?: boolean
+  categoryId?: string
 }
 
 export interface AddSongToPlaylistData {
@@ -73,4 +75,14 @@ export interface RemoveSongFromPlaylistData {
 
 export interface ReorderPlaylistSongsData {
   songIds: string[]
+}
+
+export interface PlaylistCategory {
+  id: string
+  name: string
+  description?: string
+  color?: string
+  userId: string
+  createdAt: Date
+  updatedAt: Date
 }
