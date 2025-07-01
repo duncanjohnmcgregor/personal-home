@@ -5,6 +5,9 @@ import { SpotifyService } from '@/lib/spotify'
 import { SoundCloudService } from '@/lib/soundcloud'
 import { BeatportService } from '@/lib/beatport'
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
+
 interface UnifiedSearchResult {
   platform: 'spotify' | 'soundcloud' | 'beatport'
   tracks: any[]

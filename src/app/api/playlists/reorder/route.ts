@@ -8,6 +8,9 @@ const reorderPlaylistsSchema = z.object({
   playlistIds: z.array(z.string()).min(1),
 })
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
+
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)

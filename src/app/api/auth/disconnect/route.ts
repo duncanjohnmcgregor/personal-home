@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { disconnectProvider, type Provider } from '@/lib/multi-auth'
+import { prisma } from '@/lib/prisma'
+
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
