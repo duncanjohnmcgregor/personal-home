@@ -42,9 +42,14 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: {
-        updatedAt: 'desc',
-      },
+      orderBy: [
+        {
+          position: 'asc',
+        },
+        {
+          updatedAt: 'desc',
+        },
+      ],
       take: limit,
       skip: offset,
     })
