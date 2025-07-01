@@ -26,6 +26,7 @@ export interface Song {
   artist: string
   album?: string
   duration?: number
+  bpm?: number
   spotifyId?: string
   soundcloudId?: string
   beatportId?: string
