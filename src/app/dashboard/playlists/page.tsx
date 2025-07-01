@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Search, Filter, Grid, List, FolderOpen } from 'lucide-react'
+import { Plus, Search, Music } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -11,35 +11,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ErrorMessage } from '@/components/ui/error-message'
 import { EmptyState } from '@/components/ui/empty-state'
-import { PlaylistCard } from '@/components/playlist/playlist-card'
 import { PlaylistForm } from '@/components/playlist/playlist-form'
-import { PlaylistManager } from '@/components/playlist/playlist-manager'
+import { DraggablePlaylists } from '@/components/playlist/draggable-playlists'
 import { usePlaylists } from '@/lib/hooks/use-playlists'
 import { Playlist, CreatePlaylistData, UpdatePlaylistData } from '@/types/playlist'
 import { toast } from '@/lib/hooks/use-toast'
-import Link from 'next/link'
 
 export default function PlaylistsPage() {
   const {
     playlists,
     loading,
     error,
-    pagination,
     fetchPlaylists,
     createPlaylist,
     updatePlaylist,
     deletePlaylist,
-    reorderPlaylists,
+    removeSongFromPlaylist,
+    reorderPlaylistSongs,
+    moveSongBetweenPlaylists,
   } = usePlaylists()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'name'>('updated')
-  const [filterBy, setFilterBy] = useState<'all' | 'public' | 'private'>('all')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showForm, setShowForm] = useState(false)
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -55,11 +51,7 @@ export default function PlaylistsPage() {
       const matchesSearch = playlist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (playlist.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
       
-      const matchesFilter = filterBy === 'all' || 
-        (filterBy === 'public' && playlist.isPublic) ||
-        (filterBy === 'private' && !playlist.isPublic)
-      
-      return matchesSearch && matchesFilter
+      return matchesSearch
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -82,6 +74,7 @@ export default function PlaylistsPage() {
           title: 'Success',
           description: 'Playlist created successfully',
         })
+        setShowForm(false)
       }
     } catch (error) {
       toast({
@@ -106,6 +99,7 @@ export default function PlaylistsPage() {
           description: 'Playlist updated successfully',
         })
         setEditingPlaylist(null)
+        setShowForm(false)
       }
     } catch (error) {
       toast({
@@ -150,14 +144,36 @@ export default function PlaylistsPage() {
     setEditingPlaylist(null)
   }
 
-  const handleReorderPlaylists = async (playlistIds: string[]) => {
+  const handleSongMove = async (songId: string, fromPlaylistId: string, toPlaylistId: string, newIndex: number) => {
     try {
-      const success = await reorderPlaylists(playlistIds)
+      const success = await moveSongBetweenPlaylists(songId, fromPlaylistId, toPlaylistId, newIndex)
       if (!success) {
-        throw new Error('Failed to reorder playlists')
+        throw new Error('Failed to move song')
       }
     } catch (error) {
-      // Let the component handle the error display
+      throw error
+    }
+  }
+
+  const handleSongReorder = async (playlistId: string, songIds: string[]) => {
+    try {
+      const result = await reorderPlaylistSongs(playlistId, { songIds })
+      if (!result) {
+        throw new Error('Failed to reorder songs')
+      }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  const handleSongRemove = async (playlistId: string, songId: string) => {
+    try {
+      const success = await removeSongFromPlaylist(playlistId, { songId })
+      if (!success) {
+        throw new Error('Failed to remove song')
+      }
+      await fetchPlaylists() // Refresh playlists after removal
+    } catch (error) {
       throw error
     }
   }
@@ -175,27 +191,19 @@ export default function PlaylistsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 header-mobile">
         <div className="text-content-mobile">
-          <h1 className="text-2xl sm:text-3xl font-bold">My Playlists</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Playlist Manager</h1>
           <p className="text-muted-foreground">
-            Manage your music collections
+            Drag and drop songs between playlists
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild className="sm:flex-shrink-0">
-            <Link href="/dashboard/playlists/organize">
-              <FolderOpen className="h-4 w-4 mr-2" />
-              Organize
-            </Link>
-          </Button>
-          <Button onClick={() => setShowForm(true)} className="sm:flex-shrink-0">
-            <Plus className="h-4 w-4 mr-2" />
-            New Playlist
-          </Button>
-        </div>
+        <Button onClick={() => setShowForm(true)} className="sm:flex-shrink-0">
+          <Plus className="h-4 w-4 mr-2" />
+          New Playlist
+        </Button>
       </div>
 
       {/* Filters and Search */}
-      <div className="button-group-mobile">
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -208,40 +216,23 @@ export default function PlaylistsPage() {
           </div>
         </div>
         
-        <div className="flex gap-2">
-          <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="updated">Last Updated</SelectItem>
-              <SelectItem value="created">Date Created</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-            </SelectContent>
-          </Select>
+        <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="updated">Last Updated</SelectItem>
+            <SelectItem value="created">Date Created</SelectItem>
+            <SelectItem value="name">Name</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-          <Select value={filterBy} onValueChange={(value) => setFilterBy(value as typeof filterBy)}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="public">Public</SelectItem>
-              <SelectItem value="private">Private</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="grid">
-                <Grid className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="list">
-                <List className="h-4 w-4" />
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      {/* Instructions */}
+      <div className="bg-muted/50 p-4 rounded-lg">
+        <p className="text-sm text-muted-foreground">
+          <strong>Tip:</strong> Click on playlists to expand them, then drag songs between playlists or reorder them within a playlist.
+        </p>
       </div>
 
       {/* Error State */}
@@ -259,6 +250,7 @@ export default function PlaylistsPage() {
       {/* Empty State */}
       {!loading && !error && filteredPlaylists.length === 0 && playlists.length === 0 && (
         <EmptyState
+          icon={Music}
           title="No playlists yet"
           description="Create your first playlist to get started"
           actionLabel="Create Playlist"
@@ -269,19 +261,21 @@ export default function PlaylistsPage() {
       {/* No Results State */}
       {!loading && !error && filteredPlaylists.length === 0 && playlists.length > 0 && (
         <EmptyState
+          icon={Music}
           title="No playlists found"
-          description="Try adjusting your search or filters"
+          description="Try adjusting your search"
         />
       )}
 
-      {/* Playlist Grid/List */}
+      {/* Draggable Playlists */}
       {filteredPlaylists.length > 0 && (
-        <PlaylistManager
+        <DraggablePlaylists
           playlists={filteredPlaylists}
-          viewMode={viewMode}
-          onEdit={handleEditPlaylist}
-          onDelete={handleDeletePlaylist}
-          onReorder={handleReorderPlaylists}
+          onSongMove={handleSongMove}
+          onSongReorder={handleSongReorder}
+          onSongRemove={handleSongRemove}
+          onPlaylistEdit={handleEditPlaylist}
+          onPlaylistDelete={handleDeletePlaylist}
         />
       )}
 
