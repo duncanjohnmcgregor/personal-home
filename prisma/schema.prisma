@@ -85,6 +85,7 @@ model Song {
   artist          String
   album           String?
   duration        Int?     // Duration in milliseconds
+  bpm             Int?     // Beats per minute
   spotifyId       String?
   soundcloudId    String?
   beatportId      String?
@@ -103,6 +104,7 @@ model Song {
   @@index([soundcloudId])
   @@index([beatportId])
   @@index([isrc])
+  @@index([bpm])
 }
 
 model PlaylistSong {
