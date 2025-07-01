@@ -1,19 +1,14 @@
 name: Continuous Deployment
 
 on:
-  workflow_dispatch: # Allow manual deployment
-  workflow_run:
-    workflows: ["Continuous Integration"]
-    types:
-      - completed
+  push:
     branches: [ main ]
+  workflow_dispatch: # Allow manual deployment
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
-    # Only run if CI completed successfully, or if manually triggered
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     
     env:
       POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
@@ -41,19 +36,10 @@ jobs:
       run: |
         echo "🔍 Determining cache key strategy..."
         
-        # Determine the correct SHA to use for cache lookup
-        if [ "${{ github.event_name }}" == "workflow_run" ]; then
-          # For workflow_run events, use the SHA from the triggering workflow
-          CACHE_SHA="${{ github.event.workflow_run.head_sha }}"
-          echo "📋 Workflow run event detected"
-          echo "   Triggering SHA: ${{ github.event.workflow_run.head_sha }}"
-          echo "   Current SHA: ${{ github.sha }}"
-        else
-          # For direct push or manual dispatch, use current SHA
-          CACHE_SHA="${{ github.sha }}"
-          echo "📋 Direct push/manual event detected"
-          echo "   Using current SHA: ${{ github.sha }}"
-        fi
+        # Use current SHA for cache lookup since we're deploying directly on push
+        CACHE_SHA="${{ github.sha }}"
+        echo "📋 Direct push deployment detected"
+        echo "   Using current SHA: ${{ github.sha }}"
         
         # Set outputs for use in cache steps
         echo "cache-sha=${CACHE_SHA}" >> $GITHUB_OUTPUT
@@ -127,12 +113,11 @@ jobs:
           echo "   Expected cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
           echo ""
           echo "🔍 Possible causes:"
-          echo "   1. CI workflow didn't complete successfully"
-          echo "   2. Cache key mismatch between CI and CD workflows"
-          echo "   3. Cache expired or was evicted"
-          echo "   4. Different commit SHA between CI and CD"
+          echo "   1. First deployment or cache expired"
+          echo "   2. Dependencies or schema changed"
+          echo "   3. Cache was evicted due to storage limits"
           echo ""
-          echo "ℹ️ Will rebuild fresh artifacts for deployment..."
+          echo "ℹ️ Will build fresh artifacts for deployment..."
           NEEDS_REBUILD=true
         fi
         
