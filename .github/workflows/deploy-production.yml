@@ -1,8 +1,6 @@
 name: Continuous Deployment
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch: # Allow manual deployment
   workflow_run:
     workflows: ["Continuous Integration"]
@@ -15,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     # Only run if CI completed successfully, or if manually triggered
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     
     env:
       POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
