@@ -86,10 +86,35 @@ jobs:
         # Step 2: Check database connection
         echo ""
         echo "🔍 Step 2: Testing database connection..."
-        if npx prisma db execute --stdin <<< "SELECT 1 as connection_test;" 2>/dev/null; then
-          echo "✅ Database connection successful"
+        
+        # Create a simple connection test script
+        cat > test-connection.js << 'EOF'
+        const { PrismaClient } = require('@prisma/client')
+        
+        const prisma = new PrismaClient()
+        
+        async function testConnection() {
+          try {
+            await prisma.$connect()
+            await prisma.$queryRaw`SELECT 1 as connection_test`
+            console.log('✅ Database connection successful')
+            process.exit(0)
+          } catch (error) {
+            console.log('❌ Database connection failed:', error.message)
+            process.exit(1)
+          } finally {
+            await prisma.$disconnect()
+          }
+        }
+        
+        testConnection()
+        EOF
+        
+        # Run the connection test
+        if node test-connection.js; then
+          echo "✅ Connection test completed successfully"
         else
-          echo "❌ Database connection failed"
+          echo "❌ Connection test failed"
           echo "Please verify your database connection strings"
           exit 1
         fi
