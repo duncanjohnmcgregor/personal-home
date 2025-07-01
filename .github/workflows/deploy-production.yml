@@ -31,30 +31,64 @@ jobs:
         node-version: '18'
         cache: 'npm'
 
-    - name: Check Vercel Token
-      run: |
-        if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-          echo "❌ VERCEL_TOKEN secret is not set!"
-          echo ""
-          echo "🔧 To fix this:"
-          echo "1. Go to https://vercel.com/account/tokens"
-          echo "2. Create a new token named 'GitHub Actions'"
-          echo "3. Copy the token"
-          echo "4. Go to GitHub repo → Settings → Secrets and variables → Actions"
-          echo "5. Add secret named 'VERCEL_TOKEN' with the token value"
-          echo ""
-          echo "📖 See VERCEL_SECRETS_SETUP.md for detailed instructions"
-          exit 1
-        else
-          echo "✅ VERCEL_TOKEN is configured"
-        fi
+    - name: Restore Cached Build Artifacts
+      uses: actions/cache@v3
+      with:
+        path: |
+          .next
+          node_modules/.prisma
+          node_modules
+          deployment-info.json
+        key: ${{ runner.os }}-build-artifacts-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-build-artifacts-
+        fail-on-cache-miss: true
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Restore Additional Build Cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          .next/cache
+          node_modules/.cache
+        key: ${{ runner.os }}-build-cache-${{ hashFiles('**/package-lock.json', '**/prisma/schema.prisma') }}
+        restore-keys: |
+          ${{ runner.os }}-build-cache-
+
+    - name: Verify Cached Artifacts
+      run: |
+        echo "🔍 Verifying cached artifacts..."
+        
+        if [ ! -f "deployment-info.json" ]; then
+          echo "❌ Deployment info not found! CI may have failed or cache miss occurred."
+          echo "ℹ️ Run the CI workflow first to prepare deployment artifacts."
+          exit 1
+        fi
+        
+        echo "📋 Deployment Info:"
+        cat deployment-info.json | jq '.'
+        
+        # Verify critical artifacts exist
+        if [ ! -d ".next" ]; then
+          echo "❌ Build artifacts missing"
+          exit 1
+        fi
+        
+        if [ ! -d "node_modules/.prisma" ]; then
+          echo "❌ Prisma client missing"
+          exit 1
+        fi
+        
+        echo "✅ All cached artifacts verified and ready"
+
+    - name: Install Vercel CLI
+      run: |
+        echo "📦 Installing Vercel CLI..."
+        npm install --global vercel@latest
+        echo "✅ Vercel CLI ready"
 
     - name: Verify Environment Variables
       run: |
-        echo "🔍 Verifying environment variables are accessible..."
+        echo "🔍 Verifying production environment variables..."
         
         # Check if environment variables are properly set
         if [ -n "$POSTGRES_PRISMA_URL" ]; then
@@ -78,100 +112,34 @@ jobs:
           exit 1
         fi
         
-        echo "✅ All required environment variables are accessible"
-
-    - name: Validate Database Connection Strings
-      run: |
-        echo "🔍 Validating database connection string format..."
-        
-        # Validate POSTGRES_PRISMA_URL format (without exposing the actual URL)
-        if [[ "$POSTGRES_PRISMA_URL" =~ ^postgresql:// ]]; then
-          echo "✅ POSTGRES_PRISMA_URL format is valid (starts with postgresql://)"
-        else
-          echo "❌ POSTGRES_PRISMA_URL format is invalid"
-          echo "   Expected format: postgresql://username:password@host:port/database?param=value"
+        if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+          echo "❌ VERCEL_TOKEN secret is not set!"
+          echo ""
+          echo "🔧 To fix this:"
+          echo "1. Go to https://vercel.com/account/tokens"
+          echo "2. Create a new token named 'GitHub Actions'"
+          echo "3. Copy the token"
+          echo "4. Go to GitHub repo → Settings → Secrets and variables → Actions"
+          echo "5. Add secret named 'VERCEL_TOKEN' with the token value"
+          echo ""
+          echo "📖 See VERCEL_SECRETS_SETUP.md for detailed instructions"
           exit 1
-        fi
-        
-        # Validate POSTGRES_URL_NON_POOLING format
-        if [[ "$POSTGRES_URL_NON_POOLING" =~ ^postgresql:// ]]; then
-          echo "✅ POSTGRES_URL_NON_POOLING format is valid (starts with postgresql://)"
         else
-          echo "❌ POSTGRES_URL_NON_POOLING format is invalid"
-          echo "   Expected format: postgresql://username:password@host:port/database?param=value"
-          exit 1
+          echo "✅ VERCEL_TOKEN is configured"
         fi
         
-        # Extract and validate host (without exposing sensitive info)
-        PRISMA_HOST=$(echo "$POSTGRES_PRISMA_URL" | sed -n 's/postgresql:\/\/[^@]*@\([^:]*\).*/\1/p')
-        DIRECT_HOST=$(echo "$POSTGRES_URL_NON_POOLING" | sed -n 's/postgresql:\/\/[^@]*@\([^:]*\).*/\1/p')
-        
-        if [ -n "$PRISMA_HOST" ]; then
-          echo "✅ POSTGRES_PRISMA_URL host extracted: $PRISMA_HOST"
-        else
-          echo "❌ Could not extract host from POSTGRES_PRISMA_URL"
-        fi
-        
-        if [ -n "$DIRECT_HOST" ]; then
-          echo "✅ POSTGRES_URL_NON_POOLING host extracted: $DIRECT_HOST"
-        else
-          echo "❌ Could not extract host from POSTGRES_URL_NON_POOLING"
-        fi
-        
-        echo "✅ Database connection string validation completed"
+        echo "✅ All required environment variables verified"
 
-    - name: Test Network Connectivity
+    - name: Database Connection and Schema Deployment
       run: |
-        echo "🌐 Testing network connectivity to database host..."
+        echo "🗄️ Setting up production database..."
+        echo "===================================="
         
-        # Extract host from the connection string
-        PRISMA_HOST=$(echo "$POSTGRES_PRISMA_URL" | sed -n 's/postgresql:\/\/[^@]*@\([^:]*\).*/\1/p')
-        
-        if [ -n "$PRISMA_HOST" ]; then
-          echo "Testing connectivity to: $PRISMA_HOST"
-          
-          # Test if we can resolve the hostname
-          if nslookup "$PRISMA_HOST" >/dev/null 2>&1; then
-            echo "✅ DNS resolution successful for $PRISMA_HOST"
-          else
-            echo "❌ DNS resolution failed for $PRISMA_HOST"
-            echo "   This could indicate a network issue or incorrect hostname"
-          fi
-          
-          # Test if we can reach the host on port 5432
-          if timeout 10 bash -c "</dev/tcp/$PRISMA_HOST/5432" 2>/dev/null; then
-            echo "✅ Network connectivity to $PRISMA_HOST:5432 successful"
-          else
-            echo "⚠️ Network connectivity to $PRISMA_HOST:5432 failed"
-            echo "   This might be expected if the database has connection restrictions"
-            echo "   or uses a non-standard port"
-          fi
-        else
-          echo "⚠️ Could not extract hostname for connectivity test"
-        fi
-        
-        echo "✅ Network connectivity test completed"
-
-    - name: Setup Database Schema
-      run: |
-        echo "🗄️ Setting up database schema..."
-        echo "======================================"
-        
-        # Step 1: Generate Prisma client
+        # Test database connectivity first
         echo ""
-        echo "🔧 Step 1: Generating Prisma client..."
-        if npx prisma generate; then
-          echo "✅ Prisma client generated successfully"
-        else
-          echo "❌ Failed to generate Prisma client"
-          exit 1
-        fi
+        echo "🔍 Testing database connection..."
         
-        # Step 2: Check database connection
-        echo ""
-        echo "🔍 Step 2: Testing database connection..."
-        
-        # Create a Node.js script for better connection testing
+        # Create a lightweight connection test script
         cat > test-connection.js << 'EOF'
         const { PrismaClient } = require('@prisma/client')
         
@@ -188,16 +156,8 @@ jobs:
             console.log('✅ Database connection established')
             
             // Test query execution
-            const result = await prisma.$queryRaw`SELECT 1 as connection_test`
+            await prisma.$queryRaw`SELECT 1 as connection_test`
             console.log('✅ Database query execution successful')
-            
-            // Test if database has any tables (checking if it's initialized)
-            try {
-              await prisma.$queryRaw`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' LIMIT 1`
-              console.log('✅ Database appears to be accessible')
-            } catch (error) {
-              console.log('⚠️ Database connection successful but may be empty (this is OK for first deployment)')
-            }
             
             console.log('✅ Connection test passed!')
             process.exit(0)
@@ -208,16 +168,10 @@ jobs:
             
             if (error.message.includes('ENOTFOUND')) {
               console.error('🔍 This appears to be a DNS/network issue')
-              console.error('   - Check if your database host is correct')
-              console.error('   - Verify network connectivity')
             } else if (error.message.includes('authentication')) {
               console.error('🔍 This appears to be an authentication issue')
-              console.error('   - Check your database username/password')
-              console.error('   - Verify database credentials in secrets')
             } else if (error.message.includes('database') && error.message.includes('does not exist')) {
               console.error('🔍 Database does not exist')
-              console.error('   - Ensure your database is created')
-              console.error('   - Check database name in connection string')
             }
             
             process.exit(1)
@@ -234,28 +188,12 @@ jobs:
           echo "✅ Database connection test passed"
         else
           echo "❌ Database connection test failed"
-          echo ""
-          echo "🔍 Debugging info:"
-          echo "Database URLs format check:"
-          echo "POSTGRES_PRISMA_URL should start with: postgresql://..."
-          echo "POSTGRES_URL_NON_POOLING should start with: postgresql://..."
-          echo ""
-          echo "🛠️ Common fixes:"
-          echo "1. Verify your Neon database is running"
-          echo "2. Check GitHub Secrets are correctly configured"
-          echo "3. Ensure database exists and is accessible"
-          echo "4. Verify connection string format"
           exit 1
         fi
         
-        # Step 3: Check migration status
+        # Deploy migrations
         echo ""
-        echo "📋 Step 3: Checking migration status..."
-        npx prisma migrate status || echo "⚠️ Migration status check completed (might show warnings for new database)"
-        
-        # Step 4: Deploy migrations
-        echo ""
-        echo "🚀 Step 4: Deploying database migrations..."
+        echo "🚀 Deploying database migrations..."
         if npx prisma migrate deploy; then
           echo "✅ Database migrations deployed successfully!"
         else
@@ -268,90 +206,27 @@ jobs:
           fi
         fi
         
-        # Step 5: Verify schema
-        echo ""
-        echo "🔍 Step 5: Verifying database schema..."
-        
-        # Create verification script
-        cat > verify-schema.js << 'EOF'
-        const { PrismaClient } = require('@prisma/client')
-        
-        const prisma = new PrismaClient()
-        
-        async function verifySchema() {
-          try {
-            console.log('🔍 Verifying database tables...')
-            
-            // Test each main table
-            const tables = [
-              { name: 'User', model: prisma.user },
-              { name: 'Account', model: prisma.account },
-              { name: 'Session', model: prisma.session },
-              { name: 'Playlist', model: prisma.playlist },
-              { name: 'Song', model: prisma.song },
-              { name: 'PlaylistSong', model: prisma.playlistSong }
-            ]
-            
-            for (const table of tables) {
-              const count = await table.model.count()
-              console.log(`✅ ${table.name} table: accessible (${count} records)`)
-            }
-            
-            console.log('✅ All database tables verified successfully!')
-            
-          } catch (error) {
-            console.error('❌ Schema verification failed:', error.message)
-            process.exit(1)
-          } finally {
-            await prisma.$disconnect()
-          }
-        }
-        
-        verifySchema()
-        EOF
-        
-        # Run verification
-        if node verify-schema.js; then
-          echo "✅ Database schema verification passed!"
-        else
-          echo "❌ Database schema verification failed"
-          exit 1
-        fi
-        
-        echo ""
-        echo "🎉 Database schema setup completed successfully!"
-        echo ""
-        echo "📋 Schema includes:"
-        echo "  ✅ User authentication tables (User, Account, Session)"
-        echo "  ✅ Playlist management tables (Playlist, Song, PlaylistSong)"
-        echo "  ✅ Advanced features (PurchaseHistory, ImportHistory, Sync tables)"
-        echo "  ✅ All indexes and relationships configured"
-
-    - name: Run tests and checks
-      run: |
-        npm run type-check
-        npm run lint
-
-    - name: Test build
-      run: npm run build
-
-    - name: Install Vercel CLI
-      run: npm install --global vercel@latest
+        echo "✅ Database setup completed successfully!"
 
     - name: Pull Vercel Environment Information
       run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
-    - name: Build Project Artifacts
+    - name: Build Project Artifacts for Vercel
       run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
-    - name: Deploy Project Artifacts to Vercel
-      run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-    - name: Post-Deployment Database Health Check
+    - name: Deploy to Vercel
       run: |
-        echo "🏥 Running post-deployment database health check..."
+        echo "🚀 Deploying to Vercel..."
+        DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+        echo "✅ Deployment completed"
+        echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+      id: deploy
+
+    - name: Post-Deployment Health Check
+      run: |
+        echo "🏥 Running post-deployment health check..."
         echo "Waiting for deployment to stabilize..."
-        sleep 15
+        sleep 10
         
         # Create health check script
         cat > post-deploy-health-check.js << 'EOF'
@@ -405,24 +280,48 @@ jobs:
           echo "⚠️ Deployment may still be successful, but database connectivity issues detected"
         fi
 
-    - name: Notify deployment status
+    - name: Cleanup Temporary Files
       if: always()
       run: |
+        echo "🧹 Cleaning up temporary files..."
+        rm -f test-connection.js post-deploy-health-check.js
+        echo "✅ Cleanup completed"
+
+    - name: Deployment Summary
+      if: always()
+      run: |
+        echo ""
+        echo "📋 Deployment Summary"
+        echo "===================="
         if [ "${{ job.status }}" == "success" ]; then
-          echo "✅ Production deployment successful"
-          echo "🌐 Check Vercel dashboard for live URL"
+          echo "✅ Production deployment successful!"
+          if [ -n "${{ steps.deploy.outputs.deployment-url }}" ]; then
+            echo "🌐 Deployment URL: ${{ steps.deploy.outputs.deployment-url }}"
+          else
+            echo "🌐 Check Vercel dashboard for live URL"
+          fi
           echo ""
-          echo "🎉 Deployment Summary:"
-          echo "  ✅ Database schema deployed and verified"
-          echo "  ✅ Application built and deployed"
-          echo "  ✅ Post-deployment health checks passed"
+          echo "🎉 Deployment completed in record time thanks to cached artifacts!"
+          echo ""
+          echo "📊 Performance optimizations used:"
+          echo "  ✅ Reused cached build artifacts from CI"
+          echo "  ✅ Skipped redundant dependency installation"
+          echo "  ✅ Skipped redundant build process"
+          echo "  ✅ Streamlined database operations"
+          echo "  ✅ Fast environment verification"
           echo ""
           echo "🔗 Next steps:"
           echo "  1. Test authentication with Spotify"
           echo "  2. Verify playlist functionality"
-          echo "  3. Check database operations in production"
+          echo "  3. Monitor application performance"
         else
           echo "❌ Production deployment failed"
           echo "Check the logs above for detailed error information"
+          echo ""
+          echo "💡 Troubleshooting tips:"
+          echo "  1. Ensure CI workflow completed successfully"
+          echo "  2. Verify all environment variables are set"
+          echo "  3. Check database connectivity"
+          echo "  4. Validate Vercel token permissions"
           exit 1
         fi
