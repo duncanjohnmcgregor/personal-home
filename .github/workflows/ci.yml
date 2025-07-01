@@ -288,7 +288,7 @@ jobs:
       run: |
         echo "📦 Creating deployment preparation package..."
         
-        # Create a deployment info file
+        # Create a deployment info file with comprehensive caching information
         cat > deployment-info.json << EOF
         {
           "buildId": "$(cat .next/BUILD_ID)",
@@ -297,15 +297,28 @@ jobs:
           "timestamp": "$(date -u -Iseconds)",
           "gitCommit": "${{ github.sha }}",
           "gitRef": "${{ github.ref }}",
+          "gitBranch": "${{ github.ref_name }}",
+          "eventName": "${{ github.event_name }}",
           "prismaVersion": "$(npx prisma --version | head -n1)",
           "cacheKeys": {
             "nodeModules": "${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}",
-            "buildArtifacts": "${{ runner.os }}-build-artifacts-${{ github.sha }}"
+            "buildArtifacts": "${{ runner.os }}-build-artifacts-${{ github.sha }}",
+            "buildCache": "${{ runner.os }}-build-cache-${{ hashFiles('**/package-lock.json', '**/prisma/schema.prisma') }}"
+          },
+          "buildMetrics": {
+            "buildTime": "$(date -u -Iseconds)",
+            "ciWorkflow": true,
+            "cacheStrategy": "ci-prepared"
           }
         }
         EOF
         
         echo "✅ Deployment preparation package created"
+        echo ""
+        echo "📋 Cache Information for CD workflow:"
+        echo "   Git SHA: ${{ github.sha }}"
+        echo "   Cache Key: ${{ runner.os }}-build-artifacts-${{ github.sha }}"
+        echo "   Node Modules Key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}"
 
     - name: Cache Build Artifacts and Dependencies
       uses: actions/cache@v3

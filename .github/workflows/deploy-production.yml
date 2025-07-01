@@ -38,91 +38,183 @@ jobs:
         node-version: '18'
         cache: 'npm'
 
+    - name: Determine Cache Key Strategy
+      id: cache-strategy
+      run: |
+        echo "🔍 Determining cache key strategy..."
+        
+        # Determine the correct SHA to use for cache lookup
+        if [ "${{ github.event_name }}" == "workflow_run" ]; then
+          # For workflow_run events, use the SHA from the triggering workflow
+          CACHE_SHA="${{ github.event.workflow_run.head_sha }}"
+          echo "📋 Workflow run event detected"
+          echo "   Triggering SHA: ${{ github.event.workflow_run.head_sha }}"
+          echo "   Current SHA: ${{ github.sha }}"
+        else
+          # For direct push or manual dispatch, use current SHA
+          CACHE_SHA="${{ github.sha }}"
+          echo "📋 Direct push/manual event detected"
+          echo "   Using current SHA: ${{ github.sha }}"
+        fi
+        
+        # Set outputs for use in cache steps
+        echo "cache-sha=${CACHE_SHA}" >> $GITHUB_OUTPUT
+        echo "cache-key=${{ runner.os }}-build-artifacts-${CACHE_SHA}" >> $GITHUB_OUTPUT
+        echo "node-cache-key=${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_OUTPUT
+        echo "build-cache-key=${{ runner.os }}-build-cache-${{ hashFiles('**/package-lock.json', '**/prisma/schema.prisma') }}" >> $GITHUB_OUTPUT
+        
+        echo "✅ Cache strategy determined:"
+        echo "   Cache SHA: ${CACHE_SHA}"
+        echo "   Build artifacts key: ${{ runner.os }}-build-artifacts-${CACHE_SHA}"
+
     - name: Restore Cached Build Artifacts
       uses: actions/cache@v3
+      id: cache-artifacts
       with:
         path: |
           .next
           node_modules/.prisma
           node_modules
           deployment-info.json
-        key: ${{ runner.os }}-build-artifacts-${{ github.event.workflow_run.head_sha || github.sha }}
+        key: ${{ steps.cache-strategy.outputs.cache-key }}
         restore-keys: |
           ${{ runner.os }}-build-artifacts-
-        fail-on-cache-miss: false
 
     - name: Restore Additional Build Cache
       uses: actions/cache@v3
+      id: cache-build-extras
       with:
         path: |
           .next/cache
           node_modules/.cache
-        key: ${{ runner.os }}-build-cache-${{ hashFiles('**/package-lock.json', '**/prisma/schema.prisma') }}
+        key: ${{ steps.cache-strategy.outputs.build-cache-key }}
         restore-keys: |
           ${{ runner.os }}-build-cache-
 
     - name: Verify Cached Artifacts or Build
       run: |
         echo "🔍 Verifying cached artifacts..."
+        echo "Cache hit status: ${{ steps.cache-artifacts.outputs.cache-hit }}"
+        echo "Expected cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
         
-        if [ ! -f "deployment-info.json" ]; then
-          echo "⚠️ Deployment info not found! Cache miss occurred - will rebuild."
-          echo "ℹ️ Building fresh artifacts for deployment..."
+        # Check if we got a cache hit and deployment info exists
+        if [ "${{ steps.cache-artifacts.outputs.cache-hit }}" == "true" ] && [ -f "deployment-info.json" ]; then
+          echo "✅ Cache hit! Using cached build artifacts."
+          echo ""
+          echo "📋 Cached Deployment Info:"
+          cat deployment-info.json | jq '.' 2>/dev/null || cat deployment-info.json
           
-          # Install dependencies if not cached
-          if [ ! -d "node_modules" ]; then
+          # Verify critical cached artifacts exist and are valid
+          if [ ! -d ".next" ]; then
+            echo "❌ Critical: .next directory missing from cache"
+            NEEDS_REBUILD=true
+          elif [ ! -f ".next/BUILD_ID" ]; then
+            echo "❌ Critical: BUILD_ID missing from cache"
+            NEEDS_REBUILD=true
+          elif [ ! -d "node_modules/.prisma" ]; then
+            echo "❌ Critical: Prisma client missing from cache"
+            NEEDS_REBUILD=true
+          elif [ ! -d "node_modules" ]; then
+            echo "❌ Critical: node_modules missing from cache"
+            NEEDS_REBUILD=true
+          else
+            echo "✅ All cached artifacts verified successfully"
+            echo "🚀 Ready for fast deployment!"
+            NEEDS_REBUILD=false
+          fi
+        else
+          echo "⚠️ Cache miss occurred! Details:"
+          echo "   Cache hit: ${{ steps.cache-artifacts.outputs.cache-hit }}"
+          echo "   Deployment info exists: $(test -f deployment-info.json && echo 'yes' || echo 'no')"
+          echo "   Expected cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
+          echo ""
+          echo "🔍 Possible causes:"
+          echo "   1. CI workflow didn't complete successfully"
+          echo "   2. Cache key mismatch between CI and CD workflows"
+          echo "   3. Cache expired or was evicted"
+          echo "   4. Different commit SHA between CI and CD"
+          echo ""
+          echo "ℹ️ Will rebuild fresh artifacts for deployment..."
+          NEEDS_REBUILD=true
+        fi
+        
+        if [ "$NEEDS_REBUILD" == "true" ]; then
+          echo ""
+          echo "🏗️ Rebuilding application artifacts..."
+          
+          # Install dependencies if not cached properly
+          if [ ! -d "node_modules" ] || [ ! -f "node_modules/.package-lock.json" ]; then
             echo "📦 Installing dependencies..."
             npm ci
+          else
+            echo "✅ Dependencies already available"
           fi
           
-          # Generate Prisma client if not cached
+          # Generate Prisma client if not cached properly
           if [ ! -d "node_modules/.prisma" ]; then
             echo "🔧 Generating Prisma client..."
             npx prisma generate
+          else
+            echo "✅ Prisma client already available"
           fi
           
-          # Build application if not cached
-          if [ ! -d ".next" ]; then
-            echo "🏗️ Building application..."
+          # Build application if not cached properly
+          if [ ! -d ".next" ] || [ ! -f ".next/BUILD_ID" ]; then
+            echo "🏗️ Building Next.js application..."
             npm run build
+          else
+            echo "✅ Next.js build already available"
           fi
           
-          # Create deployment info
-          echo "📋 Creating deployment info..."
+          # Create deployment info for tracking
+          echo "📋 Creating fresh deployment info..."
           cat > deployment-info.json << EOF
         {
           "buildId": "$(cat .next/BUILD_ID 2>/dev/null || echo 'fresh-build')",
           "nodeVersion": "$(node --version)",
           "npmVersion": "$(npm --version)",
           "timestamp": "$(date -u -Iseconds)",
-          "gitCommit": "${{ github.event.workflow_run.head_sha || github.sha }}",
+          "gitCommit": "${{ steps.cache-strategy.outputs.cache-sha }}",
           "gitRef": "${{ github.ref }}",
           "prismaVersion": "$(npx prisma --version | head -n1)",
           "cacheKeys": {
-            "nodeModules": "${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}",
-            "buildArtifacts": "${{ runner.os }}-build-artifacts-${{ github.event.workflow_run.head_sha || github.sha }}"
-          }
+            "nodeModules": "${{ steps.cache-strategy.outputs.node-cache-key }}",
+            "buildArtifacts": "${{ steps.cache-strategy.outputs.cache-key }}"
+          },
+          "rebuildReason": "Cache miss - fresh build required"
         }
         EOF
           
           echo "✅ Fresh build completed successfully"
-        else
-          echo "📋 Deployment Info:"
-          cat deployment-info.json | jq '.' 2>/dev/null || cat deployment-info.json
         fi
         
-        # Verify critical artifacts exist
+        # Final verification that all required artifacts exist
+        echo ""
+        echo "🔍 Final artifact verification..."
+        
         if [ ! -d ".next" ]; then
-          echo "❌ Build artifacts missing even after rebuild attempt"
+          echo "❌ Build artifacts missing: .next directory not found"
           exit 1
         fi
         
         if [ ! -d "node_modules/.prisma" ]; then
-          echo "❌ Prisma client missing even after rebuild attempt"
+          echo "❌ Prisma client missing: node_modules/.prisma not found" 
+          exit 1
+        fi
+        
+        if [ ! -d "node_modules" ]; then
+          echo "❌ Dependencies missing: node_modules not found"
           exit 1
         fi
         
         echo "✅ All deployment artifacts verified and ready"
+        echo ""
+        echo "📊 Deployment Performance Summary:"
+        if [ "${{ steps.cache-artifacts.outputs.cache-hit }}" == "true" ]; then
+          echo "   ⚡ Used cached artifacts (fast deployment)"
+        else
+          echo "   🏗️ Built fresh artifacts (standard deployment)"
+        fi
 
     - name: Install Vercel CLI
       run: |
