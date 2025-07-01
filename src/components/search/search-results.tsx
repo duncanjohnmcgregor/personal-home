@@ -60,10 +60,7 @@ function TrackItem({
     setIsAdding(true)
     try {
       await onAddToPlaylist(track)
-      toast({
-        title: 'Added to playlist',
-        description: `"${track.name}" by ${track.artist} has been added to your playlist.`,
-      })
+      // Toast is handled in the parent component (AddSongsDialog)
     } catch (error) {
       toast({
         title: 'Error',

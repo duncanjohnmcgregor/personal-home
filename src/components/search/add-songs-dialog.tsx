@@ -20,6 +20,7 @@ interface AddSongsDialogProps {
   onOpenChange: (open: boolean) => void
   playlistId: string
   playlistName: string
+  onSongAdded?: () => void
 }
 
 export function AddSongsDialog({
@@ -27,6 +28,7 @@ export function AddSongsDialog({
   onOpenChange,
   playlistId,
   playlistName,
+  onSongAdded,
 }: AddSongsDialogProps) {
   const {
     loading,
@@ -71,7 +73,8 @@ export function AddSongsDialog({
       })
 
       if (!songResponse.ok) {
-        throw new Error('Failed to create song')
+        const errorData = await songResponse.json()
+        throw new Error(errorData.error || 'Failed to create song')
       }
 
       const song = await songResponse.json()
@@ -86,6 +89,8 @@ export function AddSongsDialog({
           title: 'Song added',
           description: `"${track.name}" by ${track.artist} has been added to ${playlistName}.`,
         })
+        // Notify parent component to refresh
+        onSongAdded?.()
       } else {
         throw new Error('Failed to add song to playlist')
       }
