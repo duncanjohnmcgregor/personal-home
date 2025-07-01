@@ -161,8 +161,8 @@ export function SongItem({
       {/* BPM Badge */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {song.bpm && (
-          <Badge variant="secondary" className="text-xs">
-            {song.bpm} BPM
+          <Badge variant="secondary" className="bpm-badge text-xs">
+            {Math.round(song.bpm)} BPM
           </Badge>
         )}
       </div>

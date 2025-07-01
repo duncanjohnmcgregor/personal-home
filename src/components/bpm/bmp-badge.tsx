@@ -3,16 +3,15 @@
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { BPMAnalyzer } from './bpm-analyzer'
+import { BPMAnalyzer } from './bmp-analyzer'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { Activity, Loader2 } from 'lucide-react'
 import { Song } from '@/types'
-import { cn } from '@/lib/utils'
 
 interface BPMBadgeProps {
   song: Song
   showAnalyzer?: boolean
-  onBPMUpdated?: (bpm: number) => void
+  onBPMUpdated?: (bmp: number) => void
   className?: string
   compact?: boolean
 }
@@ -21,19 +20,19 @@ export function BPMBadge({ song, showAnalyzer = true, onBPMUpdated, className, c
   const [isOpen, setIsOpen] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
 
-  const handleBPMDetected = async (bpm: number, confidence: number) => {
+  const handleBPMDetected = async (bmp: number, confidence: number) => {
     if (!song.id) return
 
     setIsUpdating(true)
     try {
-      const response = await fetch(`/api/songs/${song.id}/bpm`, {
+      const response = await fetch(`/api/songs/${song.id}/bmp`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bpm, confidence })
+        body: JSON.stringify({ bmp, confidence })
       })
 
       if (response.ok) {
-        onBPMUpdated?.(bpm)
+        onBPMUpdated?.(bmp)
         // Close dialog after successful update
         setTimeout(() => setIsOpen(false), 2000)
       }
@@ -44,18 +43,18 @@ export function BPMBadge({ song, showAnalyzer = true, onBPMUpdated, className, c
     }
   }
 
-  const formatBPM = (bpm: number) => {
-    return Math.round(bpm).toString()
+  const formatBPM = (bmp: number) => {
+    return Math.round(bmp).toString()
   }
 
-  if (song.bpm) {
+  if (song.bmp) {
     return (
-      <div className={cn("bpm-container", className)}>
+      <div className={`bmp-container ${className}`}>
         <Badge 
+          className={`bmp-badge ${compact ? 'h-4 px-1.5 text-[10px]' : ''}`}
           variant="secondary"
-          className={cn("bpm-badge", compact && "h-4 px-1.5 text-[10px]")}
         >
-          {formatBPM(song.bpm)} BPM
+          {formatBPM(song.bmp)} BPM
         </Badge>
       </div>
     )
@@ -63,10 +62,10 @@ export function BPMBadge({ song, showAnalyzer = true, onBPMUpdated, className, c
 
   if (!song.previewUrl || !showAnalyzer) {
     return (
-      <div className={cn("bpm-container", className)}>
+      <div className={`bmp-container ${className}`}>
         <Badge 
+          className={`bmp-badge-outline ${compact ? 'h-4 px-1.5 text-[10px]' : ''}`}
           variant="outline"
-          className={cn("bpm-badge-outline", compact && "h-4 px-1.5 text-[10px]")}
         >
           No BPM
         </Badge>
@@ -75,15 +74,15 @@ export function BPMBadge({ song, showAnalyzer = true, onBPMUpdated, className, c
   }
 
   return (
-    <div className={cn("bpm-container", className)}>
+    <div className={`bmp-container ${className}`}>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button 
             variant="ghost" 
-            size="sm"
-            className={cn("h-5 px-2 text-xs hover:bg-accent", compact && "h-4 px-1.5 text-[10px]")}
+            size={compact ? "sm" : "sm"}
+            className={`h-5 px-2 text-xs hover:bg-accent ${compact ? 'h-4 px-1.5 text-[10px]' : ''}`}
           >
-            <Activity className={cn("mr-1", compact ? "h-2.5 w-2.5" : "h-3 w-3")} />
+            <Activity className={`mr-1 ${compact ? 'h-2.5 w-2.5' : 'h-3 w-3'}`} />
             Analyze
           </Button>
         </DialogTrigger>

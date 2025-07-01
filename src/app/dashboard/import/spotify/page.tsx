@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { SpotifyImportWizard } from '@/components/import/spotify-import-wizard'
 import { SpotifyPlaylistCard } from '@/components/import/spotify-playlist-card'
-import { ImportProgress } from '@/components/import/import-progress'
+import { ImportProgress, ImportProgressSummary } from '@/components/import/import-progress'
 import { ImportHistory } from '@/components/import/import-history'
 import { useToast } from '@/lib/hooks/use-toast'
 import { Music, Search, Download, CheckCircle } from 'lucide-react'
@@ -124,6 +124,38 @@ export default function SpotifyImportPage() {
         description: 'Please select at least one playlist to import.',
         variant: 'destructive',
       })
+      return
+    }
+
+    // If already importing, add new selections to the queue
+    if (importing) {
+      const newPlaylists = playlists.filter(p => 
+        selectedPlaylists.has(p.id) && 
+        !importJobs.some(job => job.playlistId === p.id)
+      )
+      
+      if (newPlaylists.length > 0) {
+        const newJobs: ImportJob[] = newPlaylists.map(playlist => ({
+          id: `job-${playlist.id}`,
+          playlistId: playlist.id,
+          playlistName: playlist.name,
+          totalTracks: playlist.tracks.total,
+          importedTracks: 0,
+          status: 'pending'
+        }))
+        
+        setImportJobs(prev => [...prev, ...newJobs])
+        
+        toast({
+          title: 'Added to queue',
+          description: `Added ${newPlaylists.length} playlist(s) to the import queue.`,
+        })
+        
+        // Import the new playlists
+        for (const playlist of newPlaylists) {
+          await importPlaylist(playlist)
+        }
+      }
       return
     }
 
@@ -420,33 +452,40 @@ export default function SpotifyImportPage() {
               </div>
               
               {selectedPlaylists.size > 0 && (
-                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="secondary">
-                      {selectedPlaylists.size} playlist(s) selected
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      Total tracks: {playlists
-                        .filter(p => selectedPlaylists.has(p.id))
-                        .reduce((sum, p) => sum + p.tracks.total, 0)}
-                    </span>
+                <div className="p-4 bg-muted rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary">
+                        {selectedPlaylists.size} playlist(s) selected
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        Total tracks: {playlists
+                          .filter(p => selectedPlaylists.has(p.id))
+                          .reduce((sum, p) => sum + p.tracks.total, 0)}
+                      </span>
+                    </div>
+                    <Button 
+                      onClick={importSelectedPlaylists}
+                      disabled={false}
+                    >
+                      {importing ? (
+                        <>
+                          <LoadingSpinner className="w-4 h-4 mr-2" />
+                          {importJobs.some(job => job.status === 'pending') ? 'Add to Queue' : 'Importing...'}
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4 mr-2" />
+                          Import Selected
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <Button 
-                    onClick={importSelectedPlaylists}
-                    disabled={importing}
-                  >
-                    {importing ? (
-                      <>
-                        <LoadingSpinner className="w-4 h-4 mr-2" />
-                        Importing...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-4 h-4 mr-2" />
-                        Import Selected
-                      </>
-                    )}
-                  </Button>
+                  
+                  {/* Show import progress beneath total count */}
+                  {importJobs.length > 0 && (
+                    <ImportProgressSummary jobs={importJobs} />
+                  )}
                 </div>
               )}
             </CardContent>
@@ -466,7 +505,7 @@ export default function SpotifyImportPage() {
               description={searchQuery ? "No playlists match your search." : "You don't have any Spotify playlists."}
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-mobile">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {filteredPlaylists.map((playlist) => (
                 <SpotifyPlaylistCard
                   key={playlist.id}

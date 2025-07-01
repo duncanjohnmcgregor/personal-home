@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Music, Users, Lock, Globe, ExternalLink } from 'lucide-react'
 import Image from 'next/image'
+import { cn } from '@/lib/utils'
 
 interface SpotifyPlaylist {
   id: string
@@ -66,9 +67,11 @@ export function SpotifyPlaylistCard({
 
   return (
     <Card 
-      className={`relative cursor-pointer transition-all duration-200 hover:shadow-md ${
-        selected ? 'ring-2 ring-primary' : ''
-      } ${importing ? 'opacity-50' : ''}`}
+      className={cn(
+        "playlist-card-compact",
+        selected && "selected",
+        importing && "opacity-50 pointer-events-none"
+      )}
       onClick={handleCardClick}
     >
       {importing && (
@@ -80,92 +83,80 @@ export function SpotifyPlaylistCard({
         </div>
       )}
 
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              checked={selected}
-              onCheckedChange={handleCheckboxChange}
-              disabled={importing}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg line-clamp-1" title={playlist.name}>
-                {playlist.name}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground line-clamp-1">
-                by {playlist.owner.display_name}
-              </p>
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
+          {/* Checkbox */}
+          <Checkbox
+            checked={selected}
+            onCheckedChange={handleCheckboxChange}
+            disabled={importing}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-shrink-0"
+          />
+
+          {/* Playlist Image */}
+          <div className="playlist-image-compact">
+            {playlistImage && !imageError ? (
+              <Image
+                src={playlistImage}
+                alt={playlist.name}
+                fill
+                className="object-cover"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <Music className="w-5 h-5 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+
+          {/* Playlist Info */}
+          <div className="playlist-info-compact">
+            <h4 className="playlist-title-compact" title={playlist.name}>
+              {playlist.name}
+            </h4>
+            <div className="playlist-meta-compact">
+              <span>by {playlist.owner.display_name}</span>
+              <span className="mx-1">•</span>
+              <span>{trackCount} track{trackCount !== 1 ? 's' : ''}</span>
+            </div>
+
+            {/* Badges */}
+            <div className="flex items-center gap-1 mt-1">
+              {playlist.collaborative && (
+                <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                  <Users className="w-2.5 h-2.5 mr-0.5" />
+                  Collab
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-[10px] h-4 px-1">
+                {playlist.public ? (
+                  <>
+                    <Globe className="w-2.5 h-2.5 mr-0.5" />
+                    Public
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-2.5 h-2.5 mr-0.5" />
+                    Private
+                  </>
+                )}
+              </Badge>
             </div>
           </div>
+
+          {/* External Link */}
           <a
             href={playlist.external_urls.spotify}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-1 hover:bg-muted rounded-sm transition-colors"
+            className="flex-shrink-0 p-1.5 hover:bg-muted rounded-sm transition-colors opacity-0 group-hover:opacity-100"
             onClick={(e) => e.stopPropagation()}
             title="Open in Spotify"
           >
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink className="w-3.5 h-3.5" />
           </a>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {/* Playlist Image */}
-        <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-muted">
-          {playlistImage && !imageError ? (
-            <Image
-              src={playlistImage}
-              alt={playlist.name}
-              fill
-              className="object-cover"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <Music className="w-12 h-12 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-
-        {/* Playlist Description */}
-        {playlist.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {playlist.description}
-          </p>
-        )}
-
-        {/* Playlist Stats and Badges */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center space-x-1 text-muted-foreground">
-              <Music className="w-4 h-4" />
-              <span>{trackCount} track{trackCount !== 1 ? 's' : ''}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {playlist.collaborative && (
-              <Badge variant="secondary" className="text-xs">
-                <Users className="w-3 h-3 mr-1" />
-                Collaborative
-              </Badge>
-            )}
-            <Badge variant="outline" className="text-xs">
-              {playlist.public ? (
-                <>
-                  <Globe className="w-3 h-3 mr-1" />
-                  Public
-                </>
-              ) : (
-                <>
-                  <Lock className="w-3 h-3 mr-1" />
-                  Private
-                </>
-              )}
-            </Badge>
-          </div>
         </div>
       </CardContent>
     </Card>

@@ -146,8 +146,8 @@ function TrackItem({
           {track.bpm && (
             <>
               <span>•</span>
-              <span className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">
-                {track.bpm} BPM
+              <span className="bpm-badge text-xs">
+                {Math.round(track.bpm)} BPM
               </span>
             </>
           )}

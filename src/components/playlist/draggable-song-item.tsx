@@ -201,14 +201,14 @@ export function DraggableSongItem({
         </div>
       </div>
 
-      {/* BPM Badge */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {song.bpm && (
-          <Badge variant="secondary" className="text-xs">
-            {song.bpm} BPM
-          </Badge>
-        )}
-      </div>
+              {/* BPM Badge */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {song.bpm && (
+            <Badge variant="secondary" className="bpm-badge text-xs">
+              {Math.round(song.bpm)} BPM
+            </Badge>
+          )}
+        </div>
 
       {/* Platform Badges */}
       <div className="flex items-center gap-2 flex-shrink-0">

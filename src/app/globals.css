@@ -38,9 +38,9 @@
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 217.2 32.6% 17.5%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 217.2 32.6% 17.5%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 84% 4.9%;
@@ -50,11 +50,11 @@
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -112,5 +112,82 @@
   /* Text content spacing */
   .text-content-mobile {
     @apply space-y-2 sm:space-y-3;
+  }
+
+  /* BPM Display Standardization */
+  .bpm-badge {
+    @apply inline-flex items-center justify-center h-5 px-2 text-xs font-medium rounded-full;
+    @apply bg-secondary text-secondary-foreground;
+    @apply min-w-[3rem];
+  }
+  
+  .bpm-badge-outline {
+    @apply bpm-badge bg-transparent border border-border text-muted-foreground;
+  }
+  
+  .bpm-table-cell {
+    @apply w-16 text-center font-mono text-xs;
+  }
+  
+  .bpm-container {
+    @apply flex items-center justify-center;
+  }
+
+  /* Import Progress Enhancements */
+  .import-progress-bar {
+    @apply w-full bg-secondary/50 rounded-full h-1.5 overflow-hidden;
+  }
+  
+  .import-progress-fill {
+    @apply bg-primary h-full transition-all duration-300 ease-out;
+  }
+  
+  .import-queue-indicator {
+    @apply flex items-center gap-2 text-xs text-muted-foreground;
+  }
+
+  /* Compact Playlist Cards */
+  .playlist-card-compact {
+    @apply relative cursor-pointer transition-all duration-200;
+    @apply hover:shadow-md hover:bg-accent/5;
+    @apply border border-border rounded-lg;
+    @apply p-3 space-y-2;
+  }
+  
+  .playlist-card-compact.selected {
+    @apply ring-2 ring-primary bg-accent/10;
+  }
+  
+  .playlist-image-compact {
+    @apply w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0;
+  }
+  
+  .playlist-info-compact {
+    @apply flex-1 min-w-0 space-y-1;
+  }
+  
+  .playlist-title-compact {
+    @apply text-sm font-medium line-clamp-1;
+  }
+  
+  .playlist-meta-compact {
+    @apply text-xs text-muted-foreground line-clamp-1;
+  }
+
+  /* Dark mode specific improvements */
+  .dark .playlist-card-compact:hover {
+    @apply bg-accent/10;
+  }
+  
+  .dark .import-progress-bar {
+    @apply bg-muted/30;
+  }
+  
+  .dark .bpm-badge {
+    @apply bg-muted text-muted-foreground;
+  }
+  
+  .dark .bpm-badge-outline {
+    @apply border-muted text-muted-foreground;
   }
 }
