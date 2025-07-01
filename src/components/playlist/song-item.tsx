@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Play, Pause, MoreVertical, Trash2, ExternalLink, Volume2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,11 +33,8 @@ export function SongItem({
   showPreviewButton = true,
 }: SongItemProps) {
   const [isRemoving, setIsRemoving] = useState(false)
-  const { song } = playlistSong
-  
-  // Use a simple state for preview instead of the context for now
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false)
-  const [audioRef] = useState(() => new Audio())
+  const { song } = playlistSong
 
   const handleRemove = async () => {
     if (isRemoving || !onRemove) return
@@ -66,40 +63,46 @@ export function SongItem({
     if (!song.previewUrl) return
     
     if (isPreviewPlaying) {
-      audioRef.pause()
+      // Stop the current audio
+      const currentAudio = document.querySelector('audio[data-preview-playing="true"]') as HTMLAudioElement
+      if (currentAudio) {
+        currentAudio.pause()
+        currentAudio.remove()
+      }
       setIsPreviewPlaying(false)
     } else {
-      audioRef.src = song.previewUrl
-      audioRef.play()
+      // Stop any other playing previews
+      const existingAudio = document.querySelector('audio[data-preview-playing="true"]') as HTMLAudioElement
+      if (existingAudio) {
+        existingAudio.pause()
+        existingAudio.remove()
+      }
+      
+      // Create and play new audio
+      const audio = new Audio(song.previewUrl)
+      audio.setAttribute('data-preview-playing', 'true')
+      audio.volume = 0.7
+      
+      audio.onended = () => {
+        setIsPreviewPlaying(false)
+        audio.remove()
+      }
+      
+      audio.onerror = () => {
+        setIsPreviewPlaying(false)
+        audio.remove()
+        console.error('Error loading audio preview')
+      }
+      
+      audio.play()
         .then(() => setIsPreviewPlaying(true))
         .catch((error: any) => {
           console.error('Error playing preview:', error)
+          setIsPreviewPlaying(false)
+          audio.remove()
         })
     }
   }
-
-  // Handle audio events
-  useEffect(() => {
-    const audio = audioRef
-    
-    const handleEnded = () => {
-      setIsPreviewPlaying(false)
-    }
-    
-    const handleError = () => {
-      setIsPreviewPlaying(false)
-      console.error('Error loading audio preview')
-    }
-    
-    audio.addEventListener('ended', handleEnded)
-    audio.addEventListener('error', handleError)
-    
-    return () => {
-      audio.removeEventListener('ended', handleEnded)
-      audio.removeEventListener('error', handleError)
-      audio.pause()
-    }
-  }, [])
 
   return (
     <div className="group flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
