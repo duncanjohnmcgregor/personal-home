@@ -242,6 +242,37 @@
 - [ ] Create purchase analytics dashboard
 - [ ] Implement refund handling
 
+## Phase 5.5: Immediate UI/UX Improvements & Bug Fixes (Priority: High)
+
+### 5.5.1 Visual & Theming Improvements
+**Estimated Time: 4-6 hours**
+**Dependencies: Phase 2 (Dashboard Layout)**
+- [ ] Dark Mode Color Fixes
+  - [ ] Fix dark mode coloring inconsistencies across the entire application
+  - [ ] Ensure proper contrast ratios for accessibility
+  - [ ] Update all component themes to support dark mode properly
+  - [ ] Test dark mode on all pages and components
+- [ ] BPM Display Standardization
+  - [ ] Fix BPM display formatting across all data tables
+  - [ ] Ensure consistent BPM formatting and positioning
+  - [ ] Add proper BPM validation and error handling
+  - [ ] Update table column widths for better BPM display
+
+### 5.5.2 Spotify Import Experience Improvements
+**Estimated Time: 3-4 hours**
+**Dependencies: Phase 3 (Spotify Integration)**
+- [ ] Spotify Import UI Enhancements
+  - [ ] Make playlist items smaller/more compact in the Import from Spotify tab
+  - [ ] Show import progress beneath the total playlist count
+  - [ ] Improve visual hierarchy and spacing in import interface
+  - [ ] Add better loading states and progress indicators
+- [ ] Download Queue Bug Fixes
+  - [ ] Fix critical bug: when download is ongoing, selecting additional playlists should properly add them to download queue
+  - [ ] Ensure proper visual feedback when playlists are added to queue during active downloads
+  - [ ] Implement proper queue management to handle multiple playlist selections
+  - [ ] Add clear indication of queue status and remaining items
+  - [ ] Fix any race conditions in download queue management
+
 ## Phase 6: Advanced Features (Priority: Low)
 
 ### 6.1 Advanced Playlist Management Features
@@ -266,7 +297,23 @@
   - [ ] Implement playlist folder/category system for better organization
   - [ ] Add undo/redo functionality for playlist modifications
 
-### 6.2 Playlist Collaboration
+### 6.2 Enhanced Playlist Management & Interactive Features
+**Estimated Time: 12-15 hours**
+**Dependencies: 6.1, Phase 3**
+- [ ] Enhanced Playlists Page Interactivity
+  - [ ] Make playlists page more interactive with better user experience
+  - [ ] Add playlist sidebar that displays songs for selected playlist
+  - [ ] Implement drag-and-drop functionality within playlist sidebar
+  - [ ] Enable dragging songs between different playlists
+  - [ ] Add drag-and-drop reordering of playlists themselves
+- [ ] Advanced Playlist Management Features
+  - [ ] Implement playlist reordering via drag-and-drop
+  - [ ] Add visual feedback for drag operations
+  - [ ] Create playlist sorting and filtering options
+  - [ ] Add playlist grouping and categorization
+  - [ ] Implement playlist search and quick navigation
+
+### 6.3 Playlist Collaboration
 **Estimated Time: 6-8 hours**
 **Dependencies: Phase 2, Phase 3, 6.1**
 - [ ] Implement playlist sharing functionality
@@ -275,7 +322,7 @@
 - [ ] Implement permission management
 - [ ] Add activity feeds for shared playlists
 
-### 6.3 Music Discovery & Recommendations
+### 6.4 Music Discovery & Recommendations
 **Estimated Time: 5-6 hours**
 **Dependencies: Phase 4**
 - [ ] Implement recommendation engine
@@ -284,7 +331,7 @@
 - [ ] Implement similar song suggestions
 - [ ] Create genre-based browsing
 
-### 6.4 Analytics & Insights
+### 6.5 Analytics & Insights
 **Estimated Time: 4-5 hours**
 **Dependencies: Phase 5**
 - [ ] Create analytics dashboard
@@ -411,10 +458,11 @@
 ## Estimated Total Development Time
 - **Phase 1-3 (Core Features + DevOps Infrastructure)**: 30-42 hours
 - **Phase 4-5 (Multi-platform)**: 20-25 hours  
-- **Phase 6 (Advanced Features)**: 23-28 hours
+- **Phase 5.5 (Immediate UI/UX Improvements & Bug Fixes)**: 7-10 hours
+- **Phase 6 (Advanced Features)**: 35-43 hours
 - **Phase 7 (Testing & Optimization)**: 13-17 hours
 - **Phase 8 (Advanced DevOps)**: 10-13 hours
-- **Total**: 96-125 hours
+- **Total**: 115-150 hours
 
 ## Notes for Cursor Agents
 - Always check dependencies before starting a task
