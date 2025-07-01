@@ -10,7 +10,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
@@ -22,7 +22,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
     
     /* Mobile spacing variables */
@@ -42,8 +42,8 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -54,7 +54,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --ring: 212.7 26.8% 83.9%;
   }
 }
 
@@ -112,5 +112,62 @@
   /* Text content spacing */
   .text-content-mobile {
     @apply space-y-2 sm:space-y-3;
+  }
+
+  /* Chrome-specific fixes for drag and drop functionality */
+  .drag-chrome-fix {
+    /* Improve Chrome drag and drop performance */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    /* Prevent text selection during drag */
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .drag-handle-chrome-fix {
+    /* Specific fixes for drag handles in Chrome */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    /* Ensure proper cursor */
+    cursor: grab;
+  }
+  
+  .drag-handle-chrome-fix:active {
+    cursor: grabbing;
+  }
+  
+  /* Fix for Chrome drag overlay issues */
+  [data-dnd-kit-dragging="true"] {
+    opacity: 0.5;
+    z-index: 9999;
+    /* Prevent Chrome from showing default drag image */
+    -webkit-user-drag: none;
+    -moz-user-drag: none;
+    user-drag: none;
+  }
+}
+
+/* Mobile and responsive improvements */
+@media (hover: hover) and (pointer: fine) {
+  /* Only apply hover states on devices with mouse */
+  .group:hover .drag-handle-chrome-fix {
+    opacity: 1;
+  }
+}
+
+@media (pointer: coarse) {
+  /* Touch device optimizations */
+  .drag-handle-chrome-fix {
+    /* Larger touch targets on mobile */
+    min-width: 44px;
+    min-height: 44px;
   }
 }

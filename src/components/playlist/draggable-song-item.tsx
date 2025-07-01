@@ -129,7 +129,7 @@ export function DraggableSongItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors ${
+      className={`group flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors drag-chrome-fix ${
         isSortableDragging ? 'z-50' : ''
       } ${isReordering ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >
@@ -138,7 +138,7 @@ export function DraggableSongItem({
         <div
           {...attributes}
           {...listeners}
-          className="flex items-center justify-center w-6 h-6 flex-shrink-0 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+          className="flex items-center justify-center w-6 h-6 flex-shrink-0 text-muted-foreground hover:text-foreground drag-handle-chrome-fix"
         >
           <GripVertical className="h-4 w-4" />
         </div>
