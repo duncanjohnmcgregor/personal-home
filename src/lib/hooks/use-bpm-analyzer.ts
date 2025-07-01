@@ -32,6 +32,11 @@ export function useBPMAnalyzer() {
 
   const initializeAnalyzer = useCallback(async () => {
     try {
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined') {
+        throw new Error('BPM analysis requires a browser environment')
+      }
+
       // Create audio context
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
       
@@ -214,6 +219,6 @@ export function useBPMAnalyzer() {
     analyzeFromURL,
     stopAnalysis,
     getAverageBPM,
-    isSupported: !!(window.AudioContext || (window as any).webkitAudioContext)
+    isSupported: typeof window !== 'undefined' && !!(window.AudioContext || (window as any).webkitAudioContext)
   }
 }

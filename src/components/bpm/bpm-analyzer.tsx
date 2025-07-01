@@ -16,7 +16,7 @@ interface BPMAnalyzerProps {
   className?: string
 }
 
-export function BPMAnalyzer({ song, onBPMDetected, className }: BPMAnalyzerProps) {
+function BPMAnalyzer({ song, onBPMDetected, className }: BPMAnalyzerProps) {
   const {
     isAnalyzing,
     currentBPM,
@@ -224,3 +224,6 @@ export function BPMAnalyzer({ song, onBPMDetected, className }: BPMAnalyzerProps
     </Card>
   )
 }
+
+export { BPMAnalyzer }
+export default BPMAnalyzer

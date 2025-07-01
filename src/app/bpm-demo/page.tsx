@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BPMAnalyzer } from '@/components/bpm/bpm-analyzer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Activity, Music } from 'lucide-react'
 import { Song } from '@/types'
+
+// Disable static optimization for this page due to Web Audio API usage
+export const dynamic = 'force-dynamic'
 
 // Sample songs with preview URLs for demo
 const sampleSongs: Song[] = [
@@ -33,6 +36,7 @@ const sampleSongs: Song[] = [
 ]
 
 export default function BPMDemoPage() {
+  const [isClient, setIsClient] = useState(false)
   const [selectedSong, setSelectedSong] = useState<Song>(sampleSongs[0])
   const [customSong, setCustomSong] = useState({
     title: '',
@@ -40,6 +44,10 @@ export default function BPMDemoPage() {
     previewUrl: ''
   })
   const [detectedBPMs, setDetectedBPMs] = useState<Record<string, { bpm: number; confidence: number }>>({})
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const handleBPMDetected = (bpm: number, confidence: number) => {
     setDetectedBPMs(prev => ({
@@ -63,6 +71,20 @@ export default function BPMDemoPage() {
     }
 
     setSelectedSong(newSong)
+  }
+
+  if (!isClient) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold flex items-center justify-center gap-3">
+            <Activity className="h-10 w-10" />
+            BPM Analyzer Demo
+          </h1>
+          <p className="text-xl text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
