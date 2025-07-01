@@ -69,3 +69,4 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 .env*.local
+connection_test.sql

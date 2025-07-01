@@ -9,6 +9,17 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    
+    env:
+      POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+      POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+      SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+      SOUNDCLOUD_CLIENT_ID: ${{ secrets.SOUNDCLOUD_CLIENT_ID }}
+      BEATPORT_CLIENT_ID: ${{ secrets.BEATPORT_CLIENT_ID }}
+      BEATPORT_CLIENT_SECRET: ${{ secrets.BEATPORT_CLIENT_SECRET }}
 
     steps:
     - name: Checkout code
@@ -41,6 +52,34 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Verify Environment Variables
+      run: |
+        echo "🔍 Verifying environment variables are accessible..."
+        
+        # Check if environment variables are properly set
+        if [ -n "$POSTGRES_PRISMA_URL" ]; then
+          echo "✅ POSTGRES_PRISMA_URL is available"
+        else
+          echo "❌ POSTGRES_PRISMA_URL is not available in environment"
+          exit 1
+        fi
+        
+        if [ -n "$POSTGRES_URL_NON_POOLING" ]; then
+          echo "✅ POSTGRES_URL_NON_POOLING is available"
+        else
+          echo "❌ POSTGRES_URL_NON_POOLING is not available in environment"
+          exit 1
+        fi
+        
+        if [ -n "$NEXTAUTH_SECRET" ]; then
+          echo "✅ NEXTAUTH_SECRET is available"
+        else
+          echo "❌ NEXTAUTH_SECRET is not available in environment"
+          exit 1
+        fi
+        
+        echo "✅ All required environment variables are accessible"
+
     - name: Validate Database Environment Variables
       run: |
         echo "🔍 Validating database environment variables..."
@@ -65,10 +104,6 @@ jobs:
         echo "✅ Database environment variables are configured"
 
     - name: Setup Database Schema
-      env:
-        POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
-        POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
-        NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
       run: |
         echo "🗄️ Setting up database schema..."
         echo "======================================"
@@ -198,10 +233,6 @@ jobs:
       run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
     - name: Post-Deployment Database Health Check
-      env:
-        POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
-        POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
-        NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
       run: |
         echo "🏥 Running post-deployment database health check..."
         echo "Waiting for deployment to stabilize..."
