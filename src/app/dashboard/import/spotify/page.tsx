@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator'
 import { SpotifyImportWizard } from '@/components/import/spotify-import-wizard'
 import { SpotifyPlaylistCard } from '@/components/import/spotify-playlist-card'
 import { ImportProgress } from '@/components/import/import-progress'
+import { ImportHistory } from '@/components/import/import-history'
 import { useToast } from '@/lib/hooks/use-toast'
 import { Music, Search, Download, CheckCircle } from 'lucide-react'
 
@@ -61,6 +62,7 @@ export default function SpotifyImportPage() {
   const [selectedPlaylists, setSelectedPlaylists] = useState<Set<string>>(new Set())
   const [importJobs, setImportJobs] = useState<ImportJob[]>([])
   const [importing, setImporting] = useState(false)
+  const [importHistoryIds, setImportHistoryIds] = useState<Map<string, string>>(new Map())
 
   // Fetch user's Spotify playlists
   useEffect(() => {
@@ -172,6 +174,8 @@ export default function SpotifyImportPage() {
         : job
     ))
 
+    let importHistoryId: string | null = null
+
     try {
       // Create the playlist in our database
       const createResponse = await fetch('/api/playlists', {
@@ -190,6 +194,31 @@ export default function SpotifyImportPage() {
       }
 
       const createdPlaylist = await createResponse.json()
+
+      // Create import history record
+      const historyResponse = await fetch('/api/import-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spotifyPlaylistId: playlist.id,
+          playlistName: playlist.name,
+          totalTracks: playlist.tracks.total,
+          playlistId: createdPlaylist.id,
+        }),
+      })
+
+      if (historyResponse.ok) {
+        const historyRecord = await historyResponse.json()
+        importHistoryId = historyRecord.id
+        setImportHistoryIds(prev => new Map(prev).set(playlist.id, historyRecord.id))
+        
+        // Update history status to importing
+        await fetch(`/api/import-history/${historyRecord.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'IMPORTING' }),
+        })
+      }
 
       // Fetch and import tracks in batches
       let offset = 0
@@ -219,6 +248,15 @@ export default function SpotifyImportPage() {
                 ? { ...job, importedTracks: totalImported }
                 : job
             ))
+
+            // Update import history progress
+            if (importHistoryId) {
+              await fetch(`/api/import-history/${importHistoryId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ importedTracks: totalImported }),
+              })
+            }
           }
         }
 
@@ -235,6 +273,19 @@ export default function SpotifyImportPage() {
           : job
       ))
 
+      // Update import history as completed
+      if (importHistoryId) {
+        await fetch(`/api/import-history/${importHistoryId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            status: 'COMPLETED',
+            importedTracks: totalImported,
+            completedAt: new Date().toISOString()
+          }),
+        })
+      }
+
     } catch (err) {
       // Mark job as failed
       setImportJobs(prev => prev.map(job => 
@@ -242,6 +293,20 @@ export default function SpotifyImportPage() {
           ? { ...job, status: 'failed', error: err instanceof Error ? err.message : 'Unknown error' }
           : job
       ))
+
+      // Update import history as failed
+      if (importHistoryId) {
+        await fetch(`/api/import-history/${importHistoryId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            status: 'FAILED',
+            errorMessage: err instanceof Error ? err.message : 'Unknown error',
+            completedAt: new Date().toISOString()
+          }),
+        })
+      }
+      
       throw err
     }
   }
@@ -320,7 +385,8 @@ export default function SpotifyImportPage() {
       <Tabs defaultValue="playlists" className="space-y-6">
         <TabsList>
           <TabsTrigger value="playlists">Your Playlists</TabsTrigger>
-          <TabsTrigger value="progress">Import Progress</TabsTrigger>
+          <TabsTrigger value="progress">Current Import</TabsTrigger>
+          <TabsTrigger value="history">Previous Imports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="playlists" className="space-y-6">
@@ -417,9 +483,9 @@ export default function SpotifyImportPage() {
         <TabsContent value="progress" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Import Progress</CardTitle>
+              <CardTitle>Current Import Progress</CardTitle>
               <CardDescription>
-                Track the progress of your playlist imports
+                Track the progress of your current playlist imports
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -436,6 +502,20 @@ export default function SpotifyImportPage() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Previous Imports</CardTitle>
+              <CardDescription>
+                View the history of your Spotify playlist imports
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ImportHistory />
             </CardContent>
           </Card>
         </TabsContent>

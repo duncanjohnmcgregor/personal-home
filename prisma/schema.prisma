@@ -71,9 +71,10 @@ model Playlist {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  songs PlaylistSong[]
-  syncs PlaylistSync[]
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  songs         PlaylistSong[]
+  syncs         PlaylistSync[]
+  importHistory ImportHistory[]
 
   @@index([userId])
   @@index([spotifyId])
@@ -200,6 +201,36 @@ enum SyncStatus {
   COMPLETED
   FAILED
   PARTIAL
+}
+
+model ImportHistory {
+  id              String       @id @default(cuid())
+  userId          String
+  playlistId      String?      // Reference to created playlist
+  spotifyPlaylistId String     // Original Spotify playlist ID
+  playlistName    String
+  totalTracks     Int
+  importedTracks  Int
+  status          ImportStatus @default(PENDING)
+  errorMessage    String?
+  startedAt       DateTime     @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  playlist        Playlist?    @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([spotifyPlaylistId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+enum ImportStatus {
+  PENDING
+  IMPORTING
+  COMPLETED
+  FAILED
 }
 
 enum SyncAction {
