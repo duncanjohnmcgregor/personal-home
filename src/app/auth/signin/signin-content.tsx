@@ -110,7 +110,7 @@ export default function SignInContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
         <Card className="w-full max-w-md">
           <CardContent className="flex items-center justify-center p-8">
             <LoadingSpinner />
@@ -122,7 +122,7 @@ export default function SignInContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
@@ -156,8 +156,8 @@ export default function SignInContent() {
           {session ? (
             // Already authenticated - show options
             <div className="space-y-4">
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800">
+              <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                <p className="text-sm text-green-800 dark:text-green-200">
                   Signed in as: <span className="font-semibold">{session.user?.email}</span>
                 </p>
               </div>
@@ -221,7 +221,7 @@ export default function SignInContent() {
             </div>
           )}
 
-          <div className="text-center text-sm text-gray-600 mt-6">
+          <div className="text-center text-sm text-muted-foreground mt-6">
             <p>
               By signing in, you agree to allow this app to access your Spotify playlists and manage them.
             </p>
