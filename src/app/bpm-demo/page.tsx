@@ -208,7 +208,7 @@ export default function BPMDemoPage() {
               <div className="space-y-2">
                 <div className="font-medium">2. Start Analysis</div>
                 <p className="text-sm text-muted-foreground">
-                  Click "Start Analysis" to begin BPM detection. The analyzer will play the preview and analyze the audio in real-time.
+                  Click &quot;Start Analysis&quot; to begin BPM detection. The analyzer will play the preview and analyze the audio in real-time.
                 </p>
               </div>
               <div className="space-y-2">

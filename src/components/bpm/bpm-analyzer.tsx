@@ -109,7 +109,7 @@ export function BPMAnalyzer({ song, onBPMDetected, className }: BPMAnalyzerProps
           BPM Analyzer
         </CardTitle>
         <CardDescription>
-          Analyze the BPM of "{song.title}" by {song.artist}
+          Analyze the BPM of &quot;{song.title}&quot; by {song.artist}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
