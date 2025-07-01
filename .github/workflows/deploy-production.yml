@@ -86,11 +86,15 @@ jobs:
         # Step 2: Check database connection
         echo ""
         echo "🔍 Step 2: Testing database connection..."
-        if npx prisma db execute --stdin <<< "SELECT 1 as connection_test;" 2>/dev/null; then
+        # Create a temporary SQL file for the connection test
+        echo "SELECT 1 as connection_test;" > connection_test.sql
+        if npx prisma db execute --file connection_test.sql 2>/dev/null; then
           echo "✅ Database connection successful"
+          rm connection_test.sql
         else
           echo "❌ Database connection failed"
           echo "Please verify your database connection strings"
+          rm connection_test.sql
           exit 1
         fi
         
