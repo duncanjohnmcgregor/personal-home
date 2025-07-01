@@ -69,3 +69,7 @@ export interface AddSongToPlaylistData {
 export interface RemoveSongFromPlaylistData {
   songId: string
 }
+
+export interface ReorderPlaylistSongsData {
+  songIds: string[]
+}

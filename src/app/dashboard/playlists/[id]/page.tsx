@@ -14,12 +14,12 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ErrorMessage } from '@/components/ui/error-message'
-import { SongList } from '@/components/playlist/song-list'
+import { PlaylistSongManager } from '@/components/playlist/playlist-song-manager'
 import { PlaylistForm } from '@/components/playlist/playlist-form'
 import { AddSongsDialog } from '@/components/search/add-songs-dialog'
 import { usePlaylist } from '@/lib/hooks/use-playlists'
 import { usePlaylists } from '@/lib/hooks/use-playlists'
-import { Playlist, UpdatePlaylistData, PlaylistSong, RemoveSongFromPlaylistData } from '@/types/playlist'
+import { Playlist, UpdatePlaylistData, PlaylistSong, RemoveSongFromPlaylistData, ReorderPlaylistSongsData } from '@/types/playlist'
 import { toast } from '@/lib/hooks/use-toast'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -29,7 +29,7 @@ export default function PlaylistDetailPage() {
   const playlistId = params.id as string
 
   const { playlist, loading, error, fetchPlaylist } = usePlaylist()
-  const { updatePlaylist, deletePlaylist, removeSongFromPlaylist } = usePlaylists()
+  const { updatePlaylist, deletePlaylist, removeSongFromPlaylist, reorderPlaylistSongs } = usePlaylists()
 
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentSong, setCurrentSong] = useState<string | null>(null)
@@ -155,6 +155,25 @@ export default function PlaylistDetailPage() {
         description: 'Failed to remove song from playlist',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleReorderSongs = async (songIds: string[]) => {
+    if (!playlist) return
+
+    const data: ReorderPlaylistSongsData = {
+      songIds,
+    }
+
+    try {
+      const updatedPlaylist = await reorderPlaylistSongs(playlist.id, data)
+      if (updatedPlaylist) {
+        // The playlist state is updated by the hook automatically
+        // We can optionally refresh to ensure consistency
+        fetchPlaylist(playlist.id)
+      }
+    } catch (error) {
+      throw error // Re-throw to let the component handle the error
     }
   }
 
@@ -372,10 +391,11 @@ export default function PlaylistDetailPage() {
 
       {/* Songs List */}
       <div className="bg-card rounded-lg p-6">
-        <SongList
+        <PlaylistSongManager
           songs={playlist.songs}
           onPlay={handlePlay}
           onRemove={handleRemoveSong}
+          onReorder={handleReorderSongs}
           currentlyPlaying={currentSong || undefined}
         />
       </div>
