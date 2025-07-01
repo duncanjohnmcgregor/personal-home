@@ -64,7 +64,7 @@ export default function PlaylistOrganizePage() {
         categories: categories.map(c => ({ ...c })),
       })
     }
-  }, [playlists.length, categories.length, saveState])
+  }, [playlists, categories, saveState])
 
   const handlePlaylistMove = async (playlistId: string, newCategoryId?: string) => {
     try {

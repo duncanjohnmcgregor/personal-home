@@ -195,20 +195,22 @@ export function BulkSongManager({
             </Select>
 
             {/* Select All */}
-            <Button
-              variant="outline"
-              onClick={handleSelectAll}
-              disabled={filteredSongs.length === 0}
-            >
-              <Checkbox
-                checked={allSelected}
-                ref={(el) => {
-                  if (el) el.indeterminate = someSelected && !allSelected
-                }}
-                className="mr-2"
-              />
-              Select All
-            </Button>
+                         <Button
+               variant="outline"
+               onClick={handleSelectAll}
+               disabled={filteredSongs.length === 0}
+             >
+               <Checkbox
+                 checked={allSelected}
+                 ref={(el) => {
+                   if (el && 'indeterminate' in el) {
+                     (el as any).indeterminate = someSelected && !allSelected
+                   }
+                 }}
+                 className="mr-2"
+               />
+               Select All
+             </Button>
           </div>
 
           {/* Actions */}

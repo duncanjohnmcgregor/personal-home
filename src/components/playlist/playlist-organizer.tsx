@@ -210,7 +210,7 @@ export function PlaylistOrganizer({
               <div className="text-center text-muted-foreground">
                 <Folder className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Create categories to organize your playlists</p>
-                <p className="text-xs">Switch to the "Manage Categories" tab</p>
+                <p className="text-xs">Switch to the &quot;Manage Categories&quot; tab</p>
               </div>
             </CardContent>
           </Card>
