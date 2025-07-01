@@ -325,6 +325,7 @@ jobs:
       with:
         path: |
           .next
+          .vercel
           node_modules/.prisma
           node_modules
           deployment-info.json
