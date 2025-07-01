@@ -258,20 +258,20 @@
   - [ ] Add proper BPM validation and error handling
   - [ ] Update table column widths for better BPM display
 
-### 5.5.2 Spotify Import Experience Improvements
+### 5.5.2 Spotify Import Experience Improvements ✅
 **Estimated Time: 3-4 hours**
 **Dependencies: Phase 3 (Spotify Integration)**
-- [ ] Spotify Import UI Enhancements
-  - [ ] Make playlist items smaller/more compact in the Import from Spotify tab
-  - [ ] Show import progress beneath the total playlist count
-  - [ ] Improve visual hierarchy and spacing in import interface
-  - [ ] Add better loading states and progress indicators
-- [ ] Download Queue Bug Fixes
-  - [ ] Fix critical bug: when download is ongoing, selecting additional playlists should properly add them to download queue
-  - [ ] Ensure proper visual feedback when playlists are added to queue during active downloads
-  - [ ] Implement proper queue management to handle multiple playlist selections
-  - [ ] Add clear indication of queue status and remaining items
-  - [ ] Fix any race conditions in download queue management
+- [x] Spotify Import UI Enhancements
+  - [x] Make playlist items smaller/more compact in the Import from Spotify tab
+  - [x] Show import progress beneath the total playlist count
+  - [x] Improve visual hierarchy and spacing in import interface
+  - [x] Add better loading states and progress indicators
+- [x] Download Queue Bug Fixes
+  - [x] Fix critical bug: when download is ongoing, selecting additional playlists should properly add them to download queue
+  - [x] Ensure proper visual feedback when playlists are added to queue during active downloads
+  - [x] Implement proper queue management to handle multiple playlist selections
+  - [x] Add clear indication of queue status and remaining items
+  - [x] Fix any race conditions in download queue management
 
 ## Phase 6: Advanced Features (Priority: Low)
 
