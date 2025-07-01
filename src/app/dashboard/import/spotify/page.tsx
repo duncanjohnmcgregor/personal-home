@@ -52,6 +52,12 @@ interface ImportJob {
   error?: string
 }
 
+interface ImportQueue {
+  jobs: ImportJob[]
+  currentJobIndex: number
+  isProcessing: boolean
+}
+
 export default function SpotifyImportPage() {
   const { data: session, status } = useSession()
   const { toast } = useToast()
@@ -60,9 +66,16 @@ export default function SpotifyImportPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPlaylists, setSelectedPlaylists] = useState<Set<string>>(new Set())
-  const [importJobs, setImportJobs] = useState<ImportJob[]>([])
-  const [importing, setImporting] = useState(false)
+  const [importQueue, setImportQueue] = useState<ImportQueue>({
+    jobs: [],
+    currentJobIndex: 0,
+    isProcessing: false
+  })
   const [importHistoryIds, setImportHistoryIds] = useState<Map<string, string>>(new Map())
+
+  // Legacy state for backwards compatibility
+  const importJobs = importQueue.jobs
+  const importing = importQueue.isProcessing
 
   // Fetch user's Spotify playlists
   useEffect(() => {
@@ -97,8 +110,9 @@ export default function SpotifyImportPage() {
     playlist.owner.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Handle playlist selection
+  // Handle playlist selection - improved to work during imports
   const togglePlaylistSelection = (playlistId: string) => {
+    // Allow selection changes even during import
     const newSelection = new Set(selectedPlaylists)
     if (newSelection.has(playlistId)) {
       newSelection.delete(playlistId)
@@ -116,7 +130,7 @@ export default function SpotifyImportPage() {
     setSelectedPlaylists(new Set())
   }
 
-  // Import selected playlists
+  // Enhanced import function with proper queue management
   const importSelectedPlaylists = async () => {
     if (selectedPlaylists.size === 0) {
       toast({
@@ -126,6 +140,7 @@ export default function SpotifyImportPage() {
       })
       return
     }
+
 
     // If already importing, add new selections to the queue
     if (importing) {
@@ -162,49 +177,88 @@ export default function SpotifyImportPage() {
     setImporting(true)
     const selectedPlaylistData = playlists.filter(p => selectedPlaylists.has(p.id))
     
-    // Initialize import jobs
-    const jobs: ImportJob[] = selectedPlaylistData.map(playlist => ({
-      id: `job-${playlist.id}`,
+    // Create new import jobs
+    const newJobs: ImportJob[] = selectedPlaylistData.map(playlist => ({
+      id: `job-${playlist.id}-${Date.now()}`,
       playlistId: playlist.id,
       playlistName: playlist.name,
       totalTracks: playlist.tracks.total,
       importedTracks: 0,
       status: 'pending'
     }))
-    
-    setImportJobs(jobs)
+
+    // Add jobs to queue
+    setImportQueue(prev => ({
+      ...prev,
+      jobs: [...prev.jobs, ...newJobs]
+    }))
+
+    // Clear selection immediately after queuing
+    setSelectedPlaylists(new Set())
+
+    // Start processing if not already running
+    if (!importQueue.isProcessing) {
+      processImportQueue([...importQueue.jobs, ...newJobs])
+    }
+
+    toast({
+      title: 'Playlists queued',
+      description: `${selectedPlaylists.size} playlist(s) added to import queue.`,
+    })
+  }
+
+     // Process the import queue sequentially
+   const processImportQueue = async (jobs: ImportJob[]) => {
+     if (jobs.length === 0) return
+
+     setImportQueue((prev: ImportQueue) => ({ ...prev, isProcessing: true }))
 
     try {
-      // Import playlists one by one to avoid overwhelming the API
-      for (const playlist of selectedPlaylistData) {
-        await importPlaylist(playlist)
+      for (let i = 0; i < jobs.length; i++) {
+        const job = jobs[i]
+        
+        // Skip already completed or failed jobs
+        if (job.status === 'completed' || job.status === 'failed') {
+          continue
+        }
+
+                 setImportQueue((prev: ImportQueue) => ({ ...prev, currentJobIndex: i }))
+         
+         const playlist = playlists.find((p: SpotifyPlaylist) => p.id === job.playlistId)
+        if (playlist) {
+          await importPlaylist(playlist, job.id)
+        }
       }
       
       toast({
         title: 'Import completed',
-        description: `Successfully imported ${selectedPlaylists.size} playlist(s).`,
+        description: `All queued playlists have been processed.`,
       })
-      
-      // Clear selection after successful import
-      setSelectedPlaylists(new Set())
     } catch (err) {
       toast({
         title: 'Import failed',
-        description: err instanceof Error ? err.message : 'Failed to import playlists',
+        description: err instanceof Error ? err.message : 'Failed to process import queue',
         variant: 'destructive',
       })
-    } finally {
-      setImporting(false)
+          } finally {
+        setImportQueue((prev: ImportQueue) => ({ 
+          ...prev, 
+          isProcessing: false,
+          currentJobIndex: 0
+        }))
     }
   }
 
-  const importPlaylist = async (playlist: SpotifyPlaylist) => {
+  const importPlaylist = async (playlist: SpotifyPlaylist, jobId?: string) => {
     // Update job status to importing
-    setImportJobs(prev => prev.map(job => 
-      job.playlistId === playlist.id 
-        ? { ...job, status: 'importing' }
-        : job
-    ))
+    setImportQueue(prev => ({
+      ...prev,
+      jobs: prev.jobs.map(job => 
+        (jobId && job.id === jobId) || (!jobId && job.playlistId === playlist.id)
+          ? { ...job, status: 'importing' }
+          : job
+      )
+    }))
 
     let importHistoryId: string | null = null
 
@@ -275,11 +329,14 @@ export default function SpotifyImportPage() {
             totalImported++
             
             // Update progress
-            setImportJobs(prev => prev.map(job => 
-              job.playlistId === playlist.id 
-                ? { ...job, importedTracks: totalImported }
-                : job
-            ))
+            setImportQueue(prev => ({
+              ...prev,
+              jobs: prev.jobs.map(job => 
+                (jobId && job.id === jobId) || (!jobId && job.playlistId === playlist.id)
+                  ? { ...job, importedTracks: totalImported }
+                  : job
+              )
+            }))
 
             // Update import history progress
             if (importHistoryId) {
@@ -299,11 +356,14 @@ export default function SpotifyImportPage() {
       }
 
       // Mark job as completed
-      setImportJobs(prev => prev.map(job => 
-        job.playlistId === playlist.id 
-          ? { ...job, status: 'completed', importedTracks: totalImported }
-          : job
-      ))
+      setImportQueue(prev => ({
+        ...prev,
+        jobs: prev.jobs.map(job => 
+          (jobId && job.id === jobId) || (!jobId && job.playlistId === playlist.id)
+            ? { ...job, status: 'completed', importedTracks: totalImported }
+            : job
+        )
+      }))
 
       // Update import history as completed
       if (importHistoryId) {
@@ -320,11 +380,14 @@ export default function SpotifyImportPage() {
 
     } catch (err) {
       // Mark job as failed
-      setImportJobs(prev => prev.map(job => 
-        job.playlistId === playlist.id 
-          ? { ...job, status: 'failed', error: err instanceof Error ? err.message : 'Unknown error' }
-          : job
-      ))
+      setImportQueue(prev => ({
+        ...prev,
+        jobs: prev.jobs.map(job => 
+          (jobId && job.id === jobId) || (!jobId && job.playlistId === playlist.id)
+            ? { ...job, status: 'failed', error: err instanceof Error ? err.message : 'Unknown error' }
+            : job
+        )
+      }))
 
       // Update import history as failed
       if (importHistoryId) {
@@ -381,6 +444,36 @@ export default function SpotifyImportPage() {
     }
   }
 
+  // Helper functions for queue status
+  const getQueueStatus = () => {
+    const totalJobs = importQueue.jobs.length
+    const completedJobs = importQueue.jobs.filter(job => job.status === 'completed').length
+    const failedJobs = importQueue.jobs.filter(job => job.status === 'failed').length
+    const pendingJobs = importQueue.jobs.filter(job => job.status === 'pending').length
+    const currentJob = importQueue.jobs[importQueue.currentJobIndex]
+    
+    return {
+      totalJobs,
+      completedJobs,
+      failedJobs,
+      pendingJobs,
+      currentJob,
+      progress: totalJobs > 0 ? ((completedJobs + failedJobs) / totalJobs) * 100 : 0
+    }
+  }
+
+  const isPlaylistQueued = (playlistId: string) => {
+    return importQueue.jobs.some(job => 
+      job.playlistId === playlistId && (job.status === 'pending' || job.status === 'importing')
+    )
+  }
+
+  const isPlaylistImporting = (playlistId: string) => {
+    return importQueue.jobs.some(job => 
+      job.playlistId === playlistId && job.status === 'importing'
+    )
+  }
+
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center h-64">
@@ -417,15 +510,30 @@ export default function SpotifyImportPage() {
       <Tabs defaultValue="playlists" className="page-content">
         <TabsList>
           <TabsTrigger value="playlists">Your Playlists</TabsTrigger>
-          <TabsTrigger value="progress">Current Import</TabsTrigger>
+          <TabsTrigger value="progress">
+            Current Import
+            {importQueue.jobs.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {getQueueStatus().completedJobs + getQueueStatus().failedJobs}/{getQueueStatus().totalJobs}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="history">Previous Imports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="playlists" className="page-content">
-          {/* Search and Selection Controls */}
+          {/* Enhanced Selection Controls with Queue Status */}
           <Card>
             <CardHeader>
-              <CardTitle>Select Playlists to Import</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                Select Playlists to Import
+                {importQueue.isProcessing && (
+                  <Badge variant="default" className="bg-blue-500">
+                    <LoadingSpinner className="w-3 h-3 mr-1" />
+                    Processing Queue
+                  </Badge>
+                )}
+              </CardTitle>
               <CardDescription>
                 Choose which playlists you want to import from your Spotify account
               </CardDescription>
@@ -450,6 +558,37 @@ export default function SpotifyImportPage() {
                   </Button>
                 </div>
               </div>
+              
+              {/* Queue Status Display */}
+              {importQueue.jobs.length > 0 && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100">Import Queue Status</h4>
+                    <div className="flex items-center space-x-2">
+                      {getQueueStatus().currentJob && (
+                        <Badge variant="outline" className="text-xs">
+                          Current: {getQueueStatus().currentJob.playlistName}
+                        </Badge>
+                      )}
+                      <Badge variant="secondary">
+                        {getQueueStatus().completedJobs + getQueueStatus().failedJobs}/{getQueueStatus().totalJobs} completed
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-blue-700 dark:text-blue-300">
+                      <span>Overall Progress</span>
+                      <span>{Math.round(getQueueStatus().progress)}%</span>
+                    </div>
+                    <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${getQueueStatus().progress}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {selectedPlaylists.size > 0 && (
                 <div className="p-4 bg-muted rounded-lg space-y-3">
@@ -481,17 +620,27 @@ export default function SpotifyImportPage() {
                       )}
                     </Button>
                   </div>
+
                   
                   {/* Show import progress beneath total count */}
                   {importJobs.length > 0 && (
                     <ImportProgressSummary jobs={importJobs} />
                   )}
+
+                  <Button 
+                    onClick={importSelectedPlaylists}
+                    disabled={selectedPlaylists.size === 0}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    {importQueue.isProcessing ? 'Add to Queue' : 'Import Selected'}
+                  </Button>
+
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Playlists Grid */}
+          {/* Playlists Grid with Compact Layout */}
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <LoadingSpinner />
@@ -505,6 +654,7 @@ export default function SpotifyImportPage() {
               description={searchQuery ? "No playlists match your search." : "You don't have any Spotify playlists."}
             />
           ) : (
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {filteredPlaylists.map((playlist) => (
                 <SpotifyPlaylistCard
@@ -512,7 +662,8 @@ export default function SpotifyImportPage() {
                   playlist={playlist}
                   selected={selectedPlaylists.has(playlist.id)}
                   onToggleSelect={() => togglePlaylistSelection(playlist.id)}
-                  importing={importing && selectedPlaylists.has(playlist.id)}
+                  importing={isPlaylistImporting(playlist.id)}
+                  queued={isPlaylistQueued(playlist.id) && !isPlaylistImporting(playlist.id)}
                 />
               ))}
             </div>
@@ -536,8 +687,13 @@ export default function SpotifyImportPage() {
                 />
               ) : (
                 <div className="space-y-4">
-                  {importJobs.map((job) => (
-                    <ImportProgress key={job.id} job={job} />
+                  {importJobs.map((job, index) => (
+                    <ImportProgress 
+                      key={job.id} 
+                      job={job}
+                      isCurrentJob={importQueue.isProcessing && index === importQueue.currentJobIndex}
+                      queuePosition={job.status === 'pending' ? index - importQueue.currentJobIndex : undefined}
+                    />
                   ))}
                 </div>
               )}

@@ -8,7 +8,8 @@ import {
   Download, 
   Link as LinkIcon, 
   History, 
-  Settings 
+  Settings,
+  FolderOpen
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,11 @@ const sidebarItems = [
     title: "My Playlists",
     href: "/dashboard/playlists",
     icon: Music,
+  },
+  {
+    title: "Organize Playlists",
+    href: "/dashboard/playlists/organize",
+    icon: FolderOpen,
   },
   {
     title: "Import from Spotify",

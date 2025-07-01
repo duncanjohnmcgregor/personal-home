@@ -258,20 +258,20 @@
   - [ ] Add proper BPM validation and error handling
   - [ ] Update table column widths for better BPM display
 
-### 5.5.2 Spotify Import Experience Improvements
+### 5.5.2 Spotify Import Experience Improvements ✅
 **Estimated Time: 3-4 hours**
 **Dependencies: Phase 3 (Spotify Integration)**
-- [ ] Spotify Import UI Enhancements
-  - [ ] Make playlist items smaller/more compact in the Import from Spotify tab
-  - [ ] Show import progress beneath the total playlist count
-  - [ ] Improve visual hierarchy and spacing in import interface
-  - [ ] Add better loading states and progress indicators
-- [ ] Download Queue Bug Fixes
-  - [ ] Fix critical bug: when download is ongoing, selecting additional playlists should properly add them to download queue
-  - [ ] Ensure proper visual feedback when playlists are added to queue during active downloads
-  - [ ] Implement proper queue management to handle multiple playlist selections
-  - [ ] Add clear indication of queue status and remaining items
-  - [ ] Fix any race conditions in download queue management
+- [x] Spotify Import UI Enhancements
+  - [x] Make playlist items smaller/more compact in the Import from Spotify tab
+  - [x] Show import progress beneath the total playlist count
+  - [x] Improve visual hierarchy and spacing in import interface
+  - [x] Add better loading states and progress indicators
+- [x] Download Queue Bug Fixes
+  - [x] Fix critical bug: when download is ongoing, selecting additional playlists should properly add them to download queue
+  - [x] Ensure proper visual feedback when playlists are added to queue during active downloads
+  - [x] Implement proper queue management to handle multiple playlist selections
+  - [x] Add clear indication of queue status and remaining items
+  - [x] Fix any race conditions in download queue management
 
 ## Phase 6: Advanced Features (Priority: Low)
 
@@ -283,13 +283,13 @@
   - [x] Create unified search interface with filtering options
   - [x] Add real-time search suggestions and autocomplete
   - [x] Implement quick-add functionality from search results
-- [ ] Drag & Drop Playlist Organization
-  - [ ] Create dedicated playlist organization screens
-  - [ ] Implement multi-playlist view with side-by-side layout
-  - [ ] Add drag and drop between playlists with visual feedback
-  - [ ] Create bulk song selection and movement functionality
-  - [ ] Implement playlist folder/category system for better organization
-  - [ ] Add undo/redo functionality for playlist modifications
+- [x] Drag & Drop Playlist Organization ✅
+  - [x] Create dedicated playlist organization screens
+  - [x] Implement multi-playlist view with side-by-side layout
+  - [x] Add drag and drop between playlists with visual feedback
+  - [x] Create bulk song selection and movement functionality
+  - [x] Implement playlist folder/category system for better organization
+  - [x] Add undo/redo functionality for playlist modifications
 
 ### 6.2 Enhanced Playlist Management & Interactive Features
 **Estimated Time: 12-15 hours**

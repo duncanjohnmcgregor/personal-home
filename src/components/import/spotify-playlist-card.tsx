@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
+
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -38,13 +40,15 @@ interface SpotifyPlaylistCardProps {
   selected: boolean
   onToggleSelect: () => void
   importing?: boolean
+  queued?: boolean
 }
 
 export function SpotifyPlaylistCard({
   playlist,
   selected,
   onToggleSelect,
-  importing = false
+  importing = false,
+  queued = false
 }: SpotifyPlaylistCardProps) {
   const [imageError, setImageError] = useState(false)
   
@@ -67,82 +71,48 @@ export function SpotifyPlaylistCard({
 
   return (
     <Card 
-      className={cn(
-        "playlist-card-compact",
-        selected && "selected",
-        importing && "opacity-50 pointer-events-none"
-      )}
+      className={`relative cursor-pointer transition-all duration-200 hover:shadow-md ${
+        selected ? 'ring-2 ring-primary' : ''
+      } ${importing ? 'opacity-50' : ''} ${queued ? 'ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' : ''}`}
+
       onClick={handleCardClick}
     >
-      {importing && (
+      {(importing || queued) && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10 rounded-lg">
           <div className="flex items-center space-x-2">
-            <LoadingSpinner className="w-4 h-4" />
-            <span className="text-sm font-medium">Importing...</span>
+            {importing ? (
+              <div className="flex items-center space-x-2">
+                <LoadingSpinner className="w-4 h-4" />
+                <span className="text-sm font-medium">Importing...</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium">Queued</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      <CardContent className="p-3">
-        <div className="flex items-center gap-3">
-          {/* Checkbox */}
-          <Checkbox
-            checked={selected}
-            onCheckedChange={handleCheckboxChange}
-            disabled={importing}
-            onClick={(e) => e.stopPropagation()}
-            className="flex-shrink-0"
-          />
+      <CardHeader className="pb-2 space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start space-x-2 flex-1 min-w-0">
+            <Checkbox
+              checked={selected}
+              onCheckedChange={handleCheckboxChange}
+              disabled={importing}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5"
+            />
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base leading-tight line-clamp-1" title={playlist.name}>
+                {playlist.name}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground line-clamp-1">
+                by {playlist.owner.display_name}
+              </p>
 
-          {/* Playlist Image */}
-          <div className="playlist-image-compact">
-            {playlistImage && !imageError ? (
-              <Image
-                src={playlistImage}
-                alt={playlist.name}
-                fill
-                className="object-cover"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Music className="w-5 h-5 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-
-          {/* Playlist Info */}
-          <div className="playlist-info-compact">
-            <h4 className="playlist-title-compact" title={playlist.name}>
-              {playlist.name}
-            </h4>
-            <div className="playlist-meta-compact">
-              <span>by {playlist.owner.display_name}</span>
-              <span className="mx-1">•</span>
-              <span>{trackCount} track{trackCount !== 1 ? 's' : ''}</span>
-            </div>
-
-            {/* Badges */}
-            <div className="flex items-center gap-1 mt-1">
-              {playlist.collaborative && (
-                <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                  <Users className="w-2.5 h-2.5 mr-0.5" />
-                  Collab
-                </Badge>
-              )}
-              <Badge variant="outline" className="text-[10px] h-4 px-1">
-                {playlist.public ? (
-                  <>
-                    <Globe className="w-2.5 h-2.5 mr-0.5" />
-                    Public
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-2.5 h-2.5 mr-0.5" />
-                    Private
-                  </>
-                )}
-              </Badge>
             </div>
           </div>
 
@@ -151,12 +121,61 @@ export function SpotifyPlaylistCard({
             href={playlist.external_urls.spotify}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 p-1.5 hover:bg-muted rounded-sm transition-colors opacity-0 group-hover:opacity-100"
+            className="p-1 hover:bg-muted rounded-sm transition-colors flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
             title="Open in Spotify"
           >
-            <ExternalLink className="w-3.5 h-3.5" />
+            <ExternalLink className="w-3 h-3" />
           </a>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-3 pt-0">
+        {/* Compact Playlist Image */}
+        <div className="relative w-full aspect-square rounded-md overflow-hidden bg-muted max-w-24 mx-auto">
+          {playlistImage && !imageError ? (
+            <Image
+              src={playlistImage}
+              alt={playlist.name}
+              fill
+              className="object-cover"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <Music className="w-8 h-8 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+
+        {/* Compact Playlist Stats */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-center text-xs text-muted-foreground">
+            <Music className="w-3 h-3 mr-1" />
+            <span>{trackCount} track{trackCount !== 1 ? 's' : ''}</span>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-1">
+            {playlist.collaborative && (
+              <Badge variant="secondary" className="text-xs px-1 py-0">
+                <Users className="w-2 h-2 mr-1" />
+                Collab
+              </Badge>
+            )}
+            <Badge variant="outline" className="text-xs px-1 py-0">
+              {playlist.public ? (
+                <>
+                  <Globe className="w-2 h-2 mr-1" />
+                  Public
+                </>
+              ) : (
+                <>
+                  <Lock className="w-2 h-2 mr-1" />
+                  Private
+                </>
+              )}
+            </Badge>
+          </div>
         </div>
       </CardContent>
     </Card>

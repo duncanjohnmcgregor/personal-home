@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Search, Filter, Grid, List } from 'lucide-react'
+import { Plus, Search, Filter, Grid, List, FolderOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -21,6 +21,7 @@ import { PlaylistManager } from '@/components/playlist/playlist-manager'
 import { usePlaylists } from '@/lib/hooks/use-playlists'
 import { Playlist, CreatePlaylistData, UpdatePlaylistData } from '@/types/playlist'
 import { toast } from '@/lib/hooks/use-toast'
+import Link from 'next/link'
 
 export default function PlaylistsPage() {
   const {
@@ -179,10 +180,18 @@ export default function PlaylistsPage() {
             Manage your music collections
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="sm:flex-shrink-0">
-          <Plus className="h-4 w-4 mr-2" />
-          New Playlist
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild className="sm:flex-shrink-0">
+            <Link href="/dashboard/playlists/organize">
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Organize
+            </Link>
+          </Button>
+          <Button onClick={() => setShowForm(true)} className="sm:flex-shrink-0">
+            <Plus className="h-4 w-4 mr-2" />
+            New Playlist
+          </Button>
+        </div>
       </div>
 
       {/* Filters and Search */}
