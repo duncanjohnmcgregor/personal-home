@@ -13,6 +13,7 @@
     "db:studio": "prisma studio",
     "db:test": "node scripts/test-db-connection.js",
     "db:diagnose": "node scripts/diagnose-env.js",
+    "db:diagnose-connection": "node scripts/diagnose-db-issue.js",
     "db:setup": "node scripts/setup-neon-database.js",
     "db:setup-local": "./scripts/setup-local-db.sh",
     "db:verify": "./scripts/verify-setup.sh",
