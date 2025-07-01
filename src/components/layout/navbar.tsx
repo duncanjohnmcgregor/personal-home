@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export function Navbar() {
   const { data: session } = useSession()
@@ -43,6 +44,9 @@ export function Navbar() {
               <Link href="/dashboard/import">
                 <Button variant="ghost">Import</Button>
               </Link>
+
+              {/* Theme toggle */}
+              <ThemeToggle />
 
               {/* User menu */}
               <DropdownMenu>
@@ -80,11 +84,14 @@ export function Navbar() {
             </div>
           )}
 
-          {/* Sign in button for unauthenticated users */}
+          {/* Sign in button and theme toggle for unauthenticated users */}
           {!session && (
-                              <Link href="/api/auth/signin">
-              <Button>Sign In</Button>
-            </Link>
+            <div className="flex items-center space-x-4">
+              <ThemeToggle />
+              <Link href="/api/auth/signin">
+                <Button>Sign In</Button>
+              </Link>
+            </div>
           )}
         </div>
       </div>

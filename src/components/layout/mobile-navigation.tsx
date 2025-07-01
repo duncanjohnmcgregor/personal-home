@@ -6,8 +6,7 @@ import {
   Home, 
   Music, 
   Download, 
-  Link as LinkIcon, 
-  History 
+  Link as LinkIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -31,11 +30,6 @@ const mobileNavItems = [
     title: "Connect",
     href: "/dashboard/connect",
     icon: LinkIcon,
-  },
-  {
-    title: "History",
-    href: "/dashboard/history",
-    icon: History,
   },
 ]
 

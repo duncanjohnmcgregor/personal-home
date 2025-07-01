@@ -8,7 +8,7 @@ import SignInContent from './signin-content'
 export default function SignInPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
         <Card className="w-full max-w-md">
           <CardContent className="flex items-center justify-center p-8">
             <LoadingSpinner />
