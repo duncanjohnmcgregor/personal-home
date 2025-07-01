@@ -17,6 +17,7 @@ import { ErrorMessage } from '@/components/ui/error-message'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PlaylistCard } from '@/components/playlist/playlist-card'
 import { PlaylistForm } from '@/components/playlist/playlist-form'
+import { PlaylistManager } from '@/components/playlist/playlist-manager'
 import { usePlaylists } from '@/lib/hooks/use-playlists'
 import { Playlist, CreatePlaylistData, UpdatePlaylistData } from '@/types/playlist'
 import { toast } from '@/lib/hooks/use-toast'
@@ -31,6 +32,7 @@ export default function PlaylistsPage() {
     createPlaylist,
     updatePlaylist,
     deletePlaylist,
+    reorderPlaylists,
   } = usePlaylists()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -147,6 +149,18 @@ export default function PlaylistsPage() {
     setEditingPlaylist(null)
   }
 
+  const handleReorderPlaylists = async (playlistIds: string[]) => {
+    try {
+      const success = await reorderPlaylists(playlistIds)
+      if (!success) {
+        throw new Error('Failed to reorder playlists')
+      }
+    } catch (error) {
+      // Let the component handle the error display
+      throw error
+    }
+  }
+
   if (loading && playlists.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -253,33 +267,13 @@ export default function PlaylistsPage() {
 
       {/* Playlist Grid/List */}
       {filteredPlaylists.length > 0 && (
-        <Tabs value={viewMode} className="space-y-4">
-          <TabsContent value="grid" className="space-y-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredPlaylists.map((playlist) => (
-                <PlaylistCard
-                  key={playlist.id}
-                  playlist={playlist}
-                  onEdit={handleEditPlaylist}
-                  onDelete={handleDeletePlaylist}
-                />
-              ))}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="list" className="space-y-0">
-            <div className="space-y-2">
-              {filteredPlaylists.map((playlist) => (
-                <PlaylistCard
-                  key={playlist.id}
-                  playlist={playlist}
-                  onEdit={handleEditPlaylist}
-                  onDelete={handleDeletePlaylist}
-                />
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
+        <PlaylistManager
+          playlists={filteredPlaylists}
+          viewMode={viewMode}
+          onEdit={handleEditPlaylist}
+          onDelete={handleDeletePlaylist}
+          onReorder={handleReorderPlaylists}
+        />
       )}
 
       {/* Playlist Form Dialog */}

@@ -26,6 +26,7 @@ interface UsePlaylistsResult {
   addSongToPlaylist: (playlistId: string, data: AddSongToPlaylistData) => Promise<boolean>
   removeSongFromPlaylist: (playlistId: string, data: RemoveSongFromPlaylistData) => Promise<boolean>
   reorderPlaylistSongs: (playlistId: string, data: ReorderPlaylistSongsData) => Promise<Playlist | null>
+  reorderPlaylists: (playlistIds: string[]) => Promise<boolean>
 }
 
 export function usePlaylists(): UsePlaylistsResult {
@@ -216,6 +217,35 @@ export function usePlaylists(): UsePlaylistsResult {
     }
   }, [])
 
+  const reorderPlaylists = useCallback(async (playlistIds: string[]): Promise<boolean> => {
+    setError(null)
+    
+    try {
+      const response = await fetch('/api/playlists/reorder', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ playlistIds }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to reorder playlists')
+      }
+      
+      const data = await response.json()
+      
+      // Update the playlists in the local state with the new order
+      setPlaylists(data.playlists)
+      
+      return true
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      return false
+    }
+  }, [])
+
   return {
     playlists,
     loading,
@@ -228,6 +258,7 @@ export function usePlaylists(): UsePlaylistsResult {
     addSongToPlaylist,
     removeSongFromPlaylist,
     reorderPlaylistSongs,
+    reorderPlaylists,
   }
 }
 
