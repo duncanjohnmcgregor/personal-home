@@ -18,15 +18,22 @@ export function ConnectButton({
   className = "w-full" 
 }: ConnectButtonProps) {
   const handleConnect = async () => {
-    if (platformName === 'SoundCloud') {
-      // Use NextAuth to connect to SoundCloud
-      await signIn('soundcloud', { 
+    const providerMap: { [key: string]: string } = {
+      'SoundCloud': 'soundcloud',
+      'Beatport': 'beatport',
+      'Spotify': 'spotify'
+    }
+
+    const providerId = providerMap[platformName]
+    
+    if (providerId) {
+      // Use NextAuth to connect to the specified provider
+      await signIn(providerId, { 
         callbackUrl: '/dashboard/connect',
         redirect: true 
       })
     } else {
-      // For other platforms that are not yet implemented
-      console.log(`Connecting to ${platformName}...`)
+      console.log(`Provider ${platformName} not yet implemented`)
     }
   }
 
