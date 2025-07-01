@@ -1,179 +1,151 @@
-# Database Connection Fix Guide
+# Database Connection Fix for CD Pipeline
 
-## Current Issue Summary
+## Issue Description
 
-The database schema setup is failing with the error:
+The database health check is failing during the CD pipeline build with this error:
+
 ```
+🔍 Step 2: Testing database connection...
 ❌ Database connection failed
-Error: Environment variable not found: POSTGRES_PRISMA_URL
+Please verify your database connection strings
 ```
 
-## Root Cause Analysis
+## Root Cause
 
-1. **✅ Prisma Client Generated Successfully** - The Prisma client was generated without issues
-2. **✅ Dependencies Installed** - All npm packages are properly installed
-3. **❌ Environment Variables Missing** - The `.env.local` file contains placeholder values instead of actual database credentials
+**Environment Variable Mismatch**: The Prisma schema is configured to use `POSTGRES_PRISMA_URL`, but this environment variable is missing from the Vercel project configuration.
 
-## Current Environment Status
-
-The `.env.local` file contains placeholder values:
-```bash
-POSTGRES_URL="postgresql://username:password@ep-example-123456.us-east-2.aws.neon.tech/neondb"
-POSTGRES_PRISMA_URL="postgresql://username:password@ep-example-123456-pooler.us-east-2.aws.neon.tech/neondb?pgbouncer=true&connection_limit=1"
-POSTGRES_URL_NON_POOLING="postgresql://username:password@ep-example-123456.us-east-2.aws.neon.tech/neondb"
+### Current Prisma Schema Configuration
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL") // ❌ Missing in Vercel
+  directUrl = env("POSTGRES_URL_NON_POOLING") // ✅ Available in Vercel
+}
 ```
 
-These are **example values** and need to be replaced with actual database credentials.
+### Current Vercel Environment Variables
+From your Vercel dashboard screenshot:
+- ✅ `POSTGRES_URL_NON_POOLING` - Available
+- ❌ `POSTGRES_PRISMA_URL` - **Missing**
+- ✅ `POSTGRES_URL` - Available (but not used by schema)
+- ✅ `DATABASE_URL` - Available (but not used by schema)
 
 ## Solution Options
 
-### Option 1: Use Vercel Environment Variables (Recommended)
+### Option 1: Add Missing Environment Variable (Recommended)
 
-If this project is deployed on Vercel and has a database configured:
+Add `POSTGRES_PRISMA_URL` to your Vercel environment variables:
 
-```bash
-# Install Vercel CLI if not available
-npm install -g vercel
+1. **Go to your Vercel project dashboard**
+2. **Navigate to Settings → Environment Variables**
+3. **Add new environment variable:**
+   - **Name**: `POSTGRES_PRISMA_URL`
+   - **Value**: Use the same value as your `POSTGRES_URL` (the connection pooling URL)
+   - **Environments**: Production, Preview, Development
 
-# Login to Vercel (requires interactive authentication)
-vercel login
-
-# Pull environment variables from Vercel project
-vercel env pull .env.local
-
-# Test the connection
-npm run db:test
+The `POSTGRES_PRISMA_URL` should typically be your **connection pooling URL** from Neon, which usually looks like:
+```
+postgresql://username:password@host/database?pgbouncer=true&connection_limit=1
 ```
 
-### Option 2: Create a Neon Database (Manual Setup)
+### Option 2: Update Prisma Schema to Use Existing Variables
 
-1. **Create Neon Account**:
-   - Go to https://console.neon.tech
-   - Sign up or log in with GitHub/Google
-   - Click "New Project"
+Alternatively, you could update your Prisma schema to use the existing environment variables:
 
-2. **Create Database Project**:
-   - Project name: `music-playlist-manager`
-   - Select region closest to your users
-   - Click "Create Project"
-
-3. **Get Connection Strings**:
-   - In your Neon dashboard, click "Connect"
-   - Copy the connection strings (they'll look like):
-     ```
-     postgresql://user:pass@ep-xxx-123456.region.aws.neon.tech/neondb
-     ```
-
-4. **Update .env.local**:
-   Replace the placeholder values with your actual Neon credentials:
-   ```bash
-   POSTGRES_URL="your-actual-direct-connection-string"
-   POSTGRES_PRISMA_URL="your-actual-pooled-connection-string"
-   POSTGRES_URL_NON_POOLING="your-actual-direct-connection-string"
-   ```
-
-### Option 3: Use Local PostgreSQL (Development Only)
-
-For local development, you can set up a local PostgreSQL instance:
-
-```bash
-# Install PostgreSQL locally (Ubuntu/Debian)
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-
-# Create database and user
-sudo -u postgres createdb music_playlist_manager
-sudo -u postgres createuser --interactive
-
-# Update .env.local with local connection
-POSTGRES_URL="postgresql://username:password@localhost:5432/music_playlist_manager"
-POSTGRES_PRISMA_URL="postgresql://username:password@localhost:5432/music_playlist_manager"
-POSTGRES_URL_NON_POOLING="postgresql://username:password@localhost:5432/music_playlist_manager"
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_URL") // Use existing variable
+  directUrl = env("POSTGRES_URL_NON_POOLING") // Already correct
+}
 ```
 
-## Testing Your Setup
+## Recommended Action
 
-After configuring your database credentials:
+**Choose Option 1** - Add the missing `POSTGRES_PRISMA_URL` environment variable to Vercel, because:
 
-1. **Test Database Connection**:
-   ```bash
-   npm run db:test
+1. Your GitHub Actions workflows are already configured to expect `POSTGRES_PRISMA_URL`
+2. The naming convention clearly distinguishes between pooled and non-pooled connections
+3. It maintains consistency with your existing workflow configuration
+
+## Implementation Steps
+
+### Step 1: Get Your Neon Connection URLs
+
+From your Neon dashboard, you should have two URLs:
+- **Connection pooling URL** (for `POSTGRES_PRISMA_URL`)
+- **Direct connection URL** (for `POSTGRES_URL_NON_POOLING`)
+
+### Step 2: Add to Vercel Environment Variables
+
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Select your project
+3. Go to **Settings** → **Environment Variables**
+4. Click **Add New**
+5. Add:
+   ```
+   Name: POSTGRES_PRISMA_URL
+   Value: [Your connection pooling URL from Neon]
+   Environments: ✓ Production ✓ Preview ✓ Development
    ```
 
-2. **Generate Prisma Client** (if needed):
-   ```bash
-   npm run db:generate
-   ```
+### Step 3: Verify Configuration
 
-3. **Create Database Tables**:
-   ```bash
-   npm run db:push
-   ```
+After adding the environment variable, your Vercel environment should have:
 
-4. **Verify Schema**:
-   ```bash
-   npm run db:studio
-   ```
+- ✅ `POSTGRES_PRISMA_URL` - Connection pooling URL
+- ✅ `POSTGRES_URL_NON_POOLING` - Direct connection URL  
+- ✅ `NEXTAUTH_SECRET` - Authentication secret
+- ✅ `NEXTAUTH_URL` - Authentication callback URL
+- ✅ `SPOTIFY_CLIENT_ID` - Spotify app client ID
+- ✅ `SPOTIFY_CLIENT_SECRET` - Spotify app client secret
 
-## Expected Success Output
+### Step 4: Trigger New Deployment
 
-When properly configured, you should see:
+1. Make a small commit to trigger the CD pipeline
+2. Or manually trigger deployment from Vercel dashboard
+3. The database health check should now pass
+
+## Expected Results
+
+After the fix, you should see:
+
 ```
-🔄 Testing database connection...
-✅ Database connected successfully
-
-📋 Environment Variables:
-POSTGRES_URL: ✅ Set
-POSTGRES_PRISMA_URL: ✅ Set
-POSTGRES_URL_NON_POOLING: ✅ Set
-
-🧪 Testing database operations...
-📊 Users in database: 0
-📊 Playlists in database: 0
-📊 Songs in database: 0
-
-✅ All database tests passed!
+🔍 Step 2: Testing database connection...
+✅ Database connection successful
 ```
 
-## Additional Configuration
+Instead of the current error.
 
-### Spotify API Setup (Optional)
-1. Go to https://developer.spotify.com/dashboard
-2. Create a new app
-3. Add redirect URI: `http://localhost:3000/api/auth/callback/spotify`
-4. Update `.env.local`:
+## Testing the Fix
+
+You can test the environment variable configuration by:
+
+1. **Local Testing**: Set the environment variables locally and run:
    ```bash
-   SPOTIFY_CLIENT_ID=your-actual-client-id
-   SPOTIFY_CLIENT_SECRET=your-actual-client-secret
+   npx prisma generate
+   npx prisma db execute --stdin <<< "SELECT 1 as connection_test;"
    ```
 
-## Troubleshooting
+2. **Vercel Testing**: After deployment, the post-deployment health check will verify the connection.
 
-### Error: "Environment variable not found"
-- Ensure `.env.local` exists in project root
-- Verify environment variables don't have quotes around the values
-- Restart your development server after changing environment variables
+## Prevention
 
-### Error: "Connection timeout"
-- Check your internet connection
-- Verify database credentials are correct
-- Ensure database server is running (for local setups)
+To prevent similar issues in the future:
 
-### Error: "Authentication failed"
-- Double-check username and password in connection string
-- Verify database user has proper permissions
+1. **Document Required Environment Variables**: Keep a list of all required environment variables
+2. **Environment Variable Validation**: Consider adding validation scripts that check for required variables
+3. **Consistent Naming**: Use consistent naming conventions across all environments (local, staging, production)
+
+## Related Files
+
+- `prisma/schema.prisma` - Database configuration
+- `.github/workflows/deploy-production.yml` - CD pipeline configuration
+- `vercel.json` - Vercel deployment configuration
 
 ## Next Steps
 
-1. Choose one of the solution options above
-2. Configure your database credentials
-3. Run `npm run db:test` to verify connection
-4. Run `npm run db:push` to create database schema
-5. Start development with `npm run dev`
-
-## Support Resources
-
-- [Neon Documentation](https://neon.tech/docs)
-- [Vercel Postgres Guide](https://vercel.com/docs/storage/postgres)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- Project Setup Guide: `DATABASE_SETUP_SOLUTION.md`
+1. ✅ Add `POSTGRES_PRISMA_URL` to Vercel environment variables
+2. ✅ Trigger new deployment  
+3. ✅ Verify database health check passes
+4. ✅ Test application functionality in production
