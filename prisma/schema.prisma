@@ -73,6 +73,7 @@ model Playlist {
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   songs PlaylistSong[]
+  syncs PlaylistSync[]
 
   @@index([userId])
   @@index([spotifyId])
@@ -95,6 +96,7 @@ model Song {
 
   playlists       PlaylistSong[]
   purchaseHistory PurchaseHistory[]
+  syncLogs        SyncLog[]
 
   @@unique([spotifyId])
   @@index([spotifyId])
@@ -138,6 +140,47 @@ model PurchaseHistory {
   @@index([status])
 }
 
+model PlaylistSync {
+  id          String     @id @default(cuid())
+  playlistId  String
+  platform    Platform
+  externalId  String?    // External playlist ID (e.g., Spotify playlist ID)
+  status      SyncStatus @default(PENDING)
+  lastSyncAt  DateTime?
+  errorMessage String?
+  conflictCount Int      @default(0)
+  successCount Int       @default(0)
+  totalCount   Int       @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  syncLogs SyncLog[]
+
+  @@unique([playlistId, platform])
+  @@index([playlistId])
+  @@index([platform])
+  @@index([status])
+}
+
+model SyncLog {
+  id           String    @id @default(cuid())
+  syncId       String
+  songId       String?
+  action       SyncAction
+  status       SyncStatus
+  errorMessage String?
+  spotifyUri   String?   // Spotify URI if found
+  createdAt    DateTime  @default(now())
+
+  sync PlaylistSync @relation(fields: [syncId], references: [id], onDelete: Cascade)
+  song Song?        @relation(fields: [songId], references: [id], onDelete: SetNull)
+
+  @@index([syncId])
+  @@index([songId])
+  @@index([status])
+}
+
 enum Platform {
   SPOTIFY
   BEATPORT
@@ -149,4 +192,20 @@ enum PurchaseStatus {
   COMPLETED
   FAILED
   REFUNDED
+}
+
+enum SyncStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+enum SyncAction {
+  ADD_TRACK
+  REMOVE_TRACK
+  CREATE_PLAYLIST
+  UPDATE_PLAYLIST
+  SEARCH_TRACK
 }
