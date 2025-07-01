@@ -12,6 +12,7 @@ interface SongListProps {
   onRemove?: (song: PlaylistSong) => void
   currentlyPlaying?: string
   showPosition?: boolean
+  showPreviewButtons?: boolean
 }
 
 export function SongList({
@@ -20,6 +21,7 @@ export function SongList({
   onRemove,
   currentlyPlaying,
   showPosition = true,
+  showPreviewButtons = true,
 }: SongListProps) {
   if (songs.length === 0) {
     return (
@@ -45,6 +47,7 @@ export function SongList({
           onPlay={onPlay}
           onRemove={onRemove}
           showPosition={showPosition}
+          showPreviewButton={showPreviewButtons}
         />
       ))}
     </div>
