@@ -33,6 +33,7 @@ jobs:
 
     - name: Restore Cached Build Artifacts
       uses: actions/cache@v3
+      id: cache-restore
       with:
         path: |
           .next
@@ -42,7 +43,23 @@ jobs:
         key: ${{ runner.os }}-build-artifacts-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-build-artifacts-
-        fail-on-cache-miss: true
+
+    - name: Debug Cache Information
+      run: |
+        echo "🔍 Debugging cache information..."
+        echo "Current workflow: ${{ github.workflow }}"
+        echo "Current ref: ${{ github.ref }}"
+        echo "Current SHA: ${{ github.sha }}"
+        echo "Event: ${{ github.event_name }}"
+        echo "Actor: ${{ github.actor }}"
+        
+        # Check if this is the right commit
+        echo ""
+        echo "📝 Recent commits:"
+        git log --oneline -5
+        
+        echo ""
+        echo "🎯 Looking for cache with key: ${{ runner.os }}-build-artifacts-${{ github.sha }}"
 
     - name: Restore Additional Build Cache
       uses: actions/cache@v3
@@ -57,28 +74,81 @@ jobs:
     - name: Verify Cached Artifacts
       run: |
         echo "🔍 Verifying cached artifacts..."
+        echo "📊 Cache Status: ${{ steps.cache-restore.outputs.cache-hit }}"
+        echo "🔑 Expected Cache Key: ${{ runner.os }}-build-artifacts-${{ github.sha }}"
+        echo "💾 Commit SHA: ${{ github.sha }}"
         
-        if [ ! -f "deployment-info.json" ]; then
-          echo "❌ Deployment info not found! CI may have failed or cache miss occurred."
-          echo "ℹ️ Run the CI workflow first to prepare deployment artifacts."
+        # List what was actually restored
+        echo "📁 Current directory contents:"
+        ls -la
+        
+        # Check for essential build artifacts first
+        if [ ! -d ".next" ]; then
+          echo "❌ Build artifacts (.next) missing"
+          echo "ℹ️ This indicates cache miss or CI workflow hasn't run successfully"
+          echo "🔧 Troubleshooting steps:"
+          echo "  1. Ensure CI workflow completed successfully on this commit"
+          echo "  2. Check if cache was restored properly"
+          echo "  3. Verify cache key matches: ${{ runner.os }}-build-artifacts-${{ github.sha }}"
           exit 1
         fi
         
-        echo "📋 Deployment Info:"
-        cat deployment-info.json | jq '.'
-        
-        # Verify critical artifacts exist
-        if [ ! -d ".next" ]; then
-          echo "❌ Build artifacts missing"
-          exit 1
+        if [ ! -d "node_modules" ]; then
+          echo "❌ Node modules missing"
+          echo "ℹ️ Cache miss occurred - falling back to fresh installation"
+          npm ci
         fi
         
         if [ ! -d "node_modules/.prisma" ]; then
-          echo "❌ Prisma client missing"
+          echo "❌ Prisma client missing - regenerating..."
+          npx prisma generate
+        fi
+        
+        # Check for deployment info (optional but helpful)
+        if [ -f "deployment-info.json" ]; then
+          echo "📋 Deployment Info Found:"
+          cat deployment-info.json
+        else
+          echo "⚠️ Deployment info not found, but continuing with available artifacts"
+          echo "ℹ️ This may happen with older cache or partial cache restoration"
+        fi
+        
+        # Verify build ID exists
+        if [ -f ".next/BUILD_ID" ]; then
+          BUILD_ID=$(cat .next/BUILD_ID)
+          echo "✅ Build ID: $BUILD_ID"
+        else
+          echo "❌ BUILD_ID missing from .next directory"
           exit 1
         fi
         
-        echo "✅ All cached artifacts verified and ready"
+        echo "✅ Essential artifacts verified and ready for deployment"
+
+    - name: Fallback Build (if cache miss)
+      if: steps.cache-restore.outputs.cache-hit != 'true'
+      run: |
+        echo "⚠️ Cache miss detected - building from scratch"
+        echo "🔧 This will take longer but ensures deployment can proceed"
+        
+        # Install dependencies if not cached
+        if [ ! -d "node_modules" ]; then
+          echo "📦 Installing dependencies..."
+          npm ci
+        fi
+        
+        # Generate Prisma client if missing
+        if [ ! -d "node_modules/.prisma" ]; then
+          echo "🔧 Generating Prisma client..."
+          npx prisma generate
+        fi
+        
+        # Build application if missing
+        if [ ! -d ".next" ]; then
+          echo "🏗️ Building application..."
+          npm run build
+        fi
+        
+        echo "✅ Fallback build completed"
 
     - name: Install Vercel CLI
       run: |

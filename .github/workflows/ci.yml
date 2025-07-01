@@ -2,7 +2,7 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
 
@@ -307,8 +307,44 @@ jobs:
         
         echo "✅ Deployment preparation package created"
 
+    - name: Verify Files Before Caching
+      run: |
+        echo "🔍 Verifying files exist before caching..."
+        echo "📁 Directory structure:"
+        ls -la
+        
+        echo ""
+        echo "🔍 .next directory:"
+        if [ -d ".next" ]; then
+          echo "✅ .next exists"
+          ls -la .next/ | head -10
+        else
+          echo "❌ .next missing"
+        fi
+        
+        echo ""
+        echo "🔍 node_modules/.prisma:"
+        if [ -d "node_modules/.prisma" ]; then
+          echo "✅ Prisma client exists"
+          ls -la node_modules/.prisma/
+        else
+          echo "❌ Prisma client missing"
+        fi
+        
+        echo ""
+        echo "🔍 deployment-info.json:"
+        if [ -f "deployment-info.json" ]; then
+          echo "✅ Deployment info exists"
+          cat deployment-info.json
+        else
+          echo "❌ Deployment info missing"
+        fi
+        
+        echo "🔑 Cache key will be: ${{ runner.os }}-build-artifacts-${{ github.sha }}"
+
     - name: Cache Build Artifacts and Dependencies
       uses: actions/cache@v3
+      id: cache-save
       with:
         path: |
           .next
@@ -328,6 +364,17 @@ jobs:
         key: ${{ runner.os }}-build-cache-${{ hashFiles('**/package-lock.json', '**/prisma/schema.prisma') }}
         restore-keys: |
           ${{ runner.os }}-build-cache-
+
+    - name: Verify Cache Creation
+      run: |
+        echo "📊 Cache Status: ${{ steps.cache-save.outputs.cache-hit }}"
+        if [ "${{ steps.cache-save.outputs.cache-hit }}" == "true" ]; then
+          echo "ℹ️ Cache was restored from previous run"
+        else
+          echo "✅ New cache created for this build"
+        fi
+        echo "🔑 Cache Key: ${{ runner.os }}-build-artifacts-${{ github.sha }}"
+        echo "💾 Commit SHA: ${{ github.sha }}"
 
     - name: CI Summary
       if: always()
