@@ -14,13 +14,13 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ErrorMessage } from '@/components/ui/error-message'
-import { PlaylistSongManager } from '@/components/playlist/playlist-song-manager'
+// Removed PlaylistSongManager - now using draggable playlists on main page
 import { PlaylistForm } from '@/components/playlist/playlist-form'
 import { AddSongsDialog } from '@/components/search/add-songs-dialog'
 import { BPMAutoAnalyzer, BPMStatus } from '@/components/bpm'
 import { usePlaylist } from '@/lib/hooks/use-playlists'
 import { usePlaylists } from '@/lib/hooks/use-playlists'
-import { Playlist, UpdatePlaylistData, PlaylistSong, RemoveSongFromPlaylistData, ReorderPlaylistSongsData } from '@/types/playlist'
+import { Playlist, UpdatePlaylistData, PlaylistSong, RemoveSongFromPlaylistData } from '@/types/playlist'
 import { toast } from '@/lib/hooks/use-toast'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -30,7 +30,7 @@ export default function PlaylistDetailPage() {
   const playlistId = params.id as string
 
   const { playlist, loading, error, fetchPlaylist } = usePlaylist()
-  const { updatePlaylist, deletePlaylist, removeSongFromPlaylist, reorderPlaylistSongs } = usePlaylists()
+  const { updatePlaylist, deletePlaylist, removeSongFromPlaylist } = usePlaylists()
 
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentSong, setCurrentSong] = useState<string | null>(null)
@@ -159,24 +159,7 @@ export default function PlaylistDetailPage() {
     }
   }
 
-  const handleReorderSongs = async (songIds: string[]) => {
-    if (!playlist) return
 
-    const data: ReorderPlaylistSongsData = {
-      songIds,
-    }
-
-    try {
-      const updatedPlaylist = await reorderPlaylistSongs(playlist.id, data)
-      if (updatedPlaylist) {
-        // The playlist state is updated by the hook automatically
-        // We can optionally refresh to ensure consistency
-        fetchPlaylist(playlist.id)
-      }
-    } catch (error) {
-      throw error // Re-throw to let the component handle the error
-    }
-  }
 
   const handleUpdatePlaylist = async (data: UpdatePlaylistData) => {
     if (!playlist) return
@@ -400,14 +383,95 @@ export default function PlaylistDetailPage() {
       <BPMStatus compact className="mb-4" />
 
       {/* Songs List */}
-      <div className="bg-card rounded-lg p-6">
-        <PlaylistSongManager
-          songs={playlist.songs}
-          onPlay={handlePlay}
-          onRemove={handleRemoveSong}
-          onReorder={handleReorderSongs}
-          currentlyPlaying={currentSong || undefined}
-        />
+      <div className="bg-card rounded-lg">
+        <div className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Songs</h2>
+          {playlist.songs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No songs in this playlist yet.</p>
+              <p className="text-sm">Click &quot;Add Songs&quot; to get started.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {playlist.songs.map((playlistSong, index) => (
+                <div
+                  key={playlistSong.id}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="w-8 text-sm text-muted-foreground text-center">
+                    {index + 1}
+                  </div>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1"
+                    onClick={() => handlePlay(playlistSong)}
+                  >
+                    {currentSong === playlistSong.song.id && isPlaying ? (
+                      <Pause className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                  </Button>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">
+                      {playlistSong.song.title}
+                    </div>
+                    <div className="text-sm text-muted-foreground truncate">
+                      {playlistSong.song.artist}
+                      {playlistSong.song.album && ` • ${playlistSong.song.album}`}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    {playlistSong.song.bpm && (
+                      <Badge variant="outline" className="text-xs">
+                        {playlistSong.song.bpm} BPM
+                      </Badge>
+                    )}
+                    
+                    {playlistSong.song.duration && (
+                      <span>
+                        {Math.floor(playlistSong.song.duration / 60000)}:
+                        {((playlistSong.song.duration % 60000) / 1000).toFixed(0).padStart(2, '0')}
+                      </span>
+                    )}
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleRemoveSong(playlistSong)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          Remove from playlist
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="px-6 py-4 border-t text-sm text-muted-foreground">
+          <p>
+            To reorder songs or move them between playlists, visit the{' '}
+            <Button
+              variant="link"
+              className="p-0 h-auto text-primary"
+              onClick={() => router.push('/dashboard/playlists')}
+            >
+              Playlist Manager
+            </Button>
+          </p>
+        </div>
       </div>
 
       {/* Edit Form Dialog */}

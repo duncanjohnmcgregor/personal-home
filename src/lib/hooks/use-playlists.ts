@@ -27,6 +27,7 @@ interface UsePlaylistsResult {
   removeSongFromPlaylist: (playlistId: string, data: RemoveSongFromPlaylistData) => Promise<boolean>
   reorderPlaylistSongs: (playlistId: string, data: ReorderPlaylistSongsData) => Promise<Playlist | null>
   reorderPlaylists: (playlistIds: string[]) => Promise<boolean>
+  moveSongBetweenPlaylists: (songId: string, fromPlaylistId: string, toPlaylistId: string, position?: number) => Promise<boolean>
 }
 
 export function usePlaylists(): UsePlaylistsResult {
@@ -246,6 +247,48 @@ export function usePlaylists(): UsePlaylistsResult {
     }
   }, [])
 
+  const moveSongBetweenPlaylists = useCallback(async (songId: string, fromPlaylistId: string, toPlaylistId: string, position?: number): Promise<boolean> => {
+    setError(null)
+    
+    try {
+      // Remove from source playlist
+      const removeResponse = await fetch(`/api/playlists/${fromPlaylistId}/songs`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ songId }),
+      })
+      
+      if (!removeResponse.ok) {
+        const errorData = await removeResponse.json()
+        throw new Error(errorData.error || 'Failed to remove song from source playlist')
+      }
+      
+      // Add to target playlist
+      const addResponse = await fetch(`/api/playlists/${toPlaylistId}/songs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ songId, position }),
+      })
+      
+      if (!addResponse.ok) {
+        const errorData = await addResponse.json()
+        throw new Error(errorData.error || 'Failed to add song to target playlist')
+      }
+      
+      // Refresh playlists to reflect changes
+      await fetchPlaylists()
+      
+      return true
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      return false
+    }
+  }, [fetchPlaylists])
+
   return {
     playlists,
     loading,
@@ -259,6 +302,7 @@ export function usePlaylists(): UsePlaylistsResult {
     removeSongFromPlaylist,
     reorderPlaylistSongs,
     reorderPlaylists,
+    moveSongBetweenPlaylists,
   }
 }
 
