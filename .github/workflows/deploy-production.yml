@@ -176,46 +176,6 @@ jobs:
         echo "   🚫 No build process executed (cache-only deployment)"
         echo "   📦 Cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
 
-    - name: Emergency Fallback Build (if no cache available)
-      if: ${{ steps.cache-artifacts.outputs.cache-hit != 'true' && (!contains(env.DISABLE_FALLBACK_BUILD, 'true')) }}
-      run: |
-        echo "🚨 EMERGENCY FALLBACK: No cached artifacts found"
-        echo "⚠️ This should rarely happen with improved cache strategy"
-        echo "🔧 Performing emergency build to prevent deployment failure..."
-        
-        # Install dependencies if not cached
-        if [ ! -d "node_modules" ] || [ ! -f "node_modules/.package-lock.json" ]; then
-          echo "📦 Installing dependencies..."
-          npm ci
-        fi
-        
-        # Generate Prisma client if not available
-        if [ ! -d "node_modules/.prisma" ]; then
-          echo "🗄️ Generating Prisma client..."
-          npx prisma generate
-        fi
-        
-        # Build application
-        echo "🏗️ Building application..."
-        npm run build
-        
-        # Create deployment info for consistency
-        cat > deployment-info.json << EOF
-        {
-          "buildId": "$(cat .next/BUILD_ID)",
-          "nodeVersion": "$(node --version)",
-          "npmVersion": "$(npm --version)",
-          "timestamp": "$(date -u -Iseconds)",
-          "gitCommit": "${{ github.sha }}",
-          "gitRef": "${{ github.ref }}",
-          "buildType": "emergency-fallback",
-          "cacheStrategy": "fallback-build"
-        }
-        EOF
-        
-        echo "✅ Emergency build completed"
-        echo "💡 Consider investigating why cache was not available"
-
     - name: Install Vercel CLI
       run: |
         echo "📦 Installing Vercel CLI..."
@@ -346,9 +306,6 @@ jobs:
 
     - name: Pull Vercel Environment Information
       run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-    - name: Build Project Artifacts for Vercel
-      run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
     - name: Deploy to Vercel
       run: |
