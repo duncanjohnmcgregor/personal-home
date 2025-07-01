@@ -1,25 +1,16 @@
 name: automerge
 on:
-  pull_request:
-    types:
-      - labeled
-      - unlabeled
-      - synchronize
-      - opened
-      - edited
-      - ready_for_review
-      - reopened
-      - unlocked
-  pull_request_review:
-    types:
-      - submitted
-  check_suite:
+  workflow_run:
+    workflows: ["Continuous Integration"]
     types:
       - completed
-  status: {}
+    branches: [main, develop]
+
 jobs:
   automerge:
     runs-on: ubuntu-latest
+    # Only run if the CI workflow completed successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write
       pull-requests: write
