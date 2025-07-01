@@ -1,4 +1,8 @@
 export { BPMAnalyzer } from './bpm-analyzer'
 export { BPMBadge } from './bpm-badge'
+export { BPMAutoAnalyzer, useBPMAutoAnalyzer } from './bpm-auto-analyzer'
+export { BPMStatus } from './bpm-status'
 export { useBPMAnalyzer } from '@/lib/hooks/use-bpm-analyzer'
+export { useBPMBackground } from '@/lib/hooks/use-bpm-background'
 export type { BPMAnalysisResult, BPMAnalysisState } from '@/lib/hooks/use-bpm-analyzer'
+export type { BPMAnalysisJob } from '@/lib/services/bpm-background-service'

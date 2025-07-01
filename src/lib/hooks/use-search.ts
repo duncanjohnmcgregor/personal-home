@@ -7,6 +7,7 @@ export interface SearchTrack {
   artist: string
   album?: string
   duration?: number
+  bpm?: number
   image?: string
   previewUrl?: string
   platform: 'spotify' | 'soundcloud' | 'beatport'
