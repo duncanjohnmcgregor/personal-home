@@ -17,6 +17,7 @@ import { ErrorMessage } from '@/components/ui/error-message'
 import { PlaylistSongManager } from '@/components/playlist/playlist-song-manager'
 import { PlaylistForm } from '@/components/playlist/playlist-form'
 import { AddSongsDialog } from '@/components/search/add-songs-dialog'
+import { BPMAutoAnalyzer, BPMStatus } from '@/components/bpm'
 import { usePlaylist } from '@/lib/hooks/use-playlists'
 import { usePlaylists } from '@/lib/hooks/use-playlists'
 import { Playlist, UpdatePlaylistData, PlaylistSong, RemoveSongFromPlaylistData, ReorderPlaylistSongsData } from '@/types/playlist'
@@ -388,6 +389,15 @@ export default function PlaylistDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* BPM Analysis */}
+      <BPMAutoAnalyzer 
+        songs={playlist.songs.map(ps => ps.song)} 
+        priority="normal"
+      />
+
+      {/* BPM Status */}
+      <BPMStatus compact className="mb-4" />
 
       {/* Songs List */}
       <div className="bg-card rounded-lg p-6">

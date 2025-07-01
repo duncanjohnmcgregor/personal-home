@@ -143,6 +143,14 @@ function TrackItem({
               </div>
             </>
           )}
+          {track.bpm && (
+            <>
+              <span>•</span>
+              <span className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">
+                {track.bpm} BPM
+              </span>
+            </>
+          )}
         </div>
       </div>
 
