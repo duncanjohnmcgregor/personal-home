@@ -146,13 +146,44 @@ jobs:
         export { testTypes }
         EOF
         
-        # Test TypeScript compilation with generated types
-        if npx tsc --noEmit test-schema.ts; then
+        # Create a temporary tsconfig for schema testing with ES2015+ target
+        cat > tsconfig.schema-test.json << 'EOF'
+        {
+          "compilerOptions": {
+            "target": "es2015",
+            "lib": ["dom", "dom.iterable", "es6"],
+            "allowJs": true,
+            "skipLibCheck": true,
+            "strict": true,
+            "noEmit": true,
+            "esModuleInterop": true,
+            "module": "esnext",
+            "moduleResolution": "bundler",
+            "resolveJsonModule": true,
+            "isolatedModules": true,
+            "jsx": "preserve",
+            "baseUrl": ".",
+            "paths": {
+              "@/*": ["./src/*"],
+              "@/components/*": ["./src/components/*"],
+              "@/lib/*": ["./src/lib/*"],
+              "@/hooks/*": ["./src/hooks/*"],
+              "@/store/*": ["./src/store/*"],
+              "@/types/*": ["./src/types/*"]
+            }
+          },
+          "include": ["test-schema.ts"],
+          "exclude": ["node_modules"]
+        }
+        EOF
+        
+        # Test TypeScript compilation with Prisma-compatible configuration
+        if npx tsc --project tsconfig.schema-test.json; then
           echo "✅ Database schema types are valid"
-          rm test-schema.ts
+          rm test-schema.ts tsconfig.schema-test.json
         else
           echo "❌ Database schema type checking failed"
-          rm test-schema.ts
+          rm test-schema.ts tsconfig.schema-test.json
           exit 1
         fi
 
