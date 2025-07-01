@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Play, Pause, MoreVertical, Trash2, ExternalLink } from 'lucide-react'
+import { Play, Pause, MoreVertical, Trash2, ExternalLink, Volume2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -20,6 +20,7 @@ interface SongItemProps {
   onPlay?: (song: PlaylistSong) => void
   onRemove?: (song: PlaylistSong) => void
   showPosition?: boolean
+  showPreviewButton?: boolean
 }
 
 export function SongItem({
@@ -29,8 +30,10 @@ export function SongItem({
   onPlay,
   onRemove,
   showPosition = true,
+  showPreviewButton = true,
 }: SongItemProps) {
   const [isRemoving, setIsRemoving] = useState(false)
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false)
   const { song } = playlistSong
 
   const handleRemove = async () => {
@@ -53,6 +56,51 @@ export function SongItem({
   const handleExternalLink = () => {
     if (song.spotifyId) {
       window.open(`https://open.spotify.com/track/${song.spotifyId}`, '_blank')
+    }
+  }
+
+  const handlePreviewPlay = () => {
+    if (!song.previewUrl) return
+    
+    if (isPreviewPlaying) {
+      // Stop the current audio
+      const currentAudio = document.querySelector('audio[data-preview-playing="true"]') as HTMLAudioElement
+      if (currentAudio) {
+        currentAudio.pause()
+        currentAudio.remove()
+      }
+      setIsPreviewPlaying(false)
+    } else {
+      // Stop any other playing previews
+      const existingAudio = document.querySelector('audio[data-preview-playing="true"]') as HTMLAudioElement
+      if (existingAudio) {
+        existingAudio.pause()
+        existingAudio.remove()
+      }
+      
+      // Create and play new audio
+      const audio = new Audio(song.previewUrl)
+      audio.setAttribute('data-preview-playing', 'true')
+      audio.volume = 0.7
+      
+      audio.onended = () => {
+        setIsPreviewPlaying(false)
+        audio.remove()
+      }
+      
+      audio.onerror = () => {
+        setIsPreviewPlaying(false)
+        audio.remove()
+        console.error('Error loading audio preview')
+      }
+      
+      audio.play()
+        .then(() => setIsPreviewPlaying(true))
+        .catch((error: any) => {
+          console.error('Error playing preview:', error)
+          setIsPreviewPlaying(false)
+          audio.remove()
+        })
     }
   }
 
@@ -128,6 +176,25 @@ export function SongItem({
           </Badge>
         )}
       </div>
+
+      {/* Preview Button */}
+      {showPreviewButton && song.previewUrl && (
+        <div className="flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 p-0"
+            onClick={handlePreviewPlay}
+            title={isPreviewPlaying ? 'Stop preview' : 'Play preview'}
+          >
+            {isPreviewPlaying ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Volume2 className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Duration */}
       {song.duration && (
