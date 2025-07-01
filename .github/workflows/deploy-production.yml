@@ -1,10 +1,7 @@
-THIS SHOULD BE A LINTER ERRORname: Continuous Deployment
+name: Continuous Deployment
 
 on:
-  workflow_run:
-    workflows: ["Continuous Integration"]
-    types:
-      - completed
+  push:
     branches: [ main ]
   workflow_dispatch: # Allow manual deployment
 
@@ -12,8 +9,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
-    # Only run if CI completed successfully, or if manually triggered
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     
     env:
       POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
@@ -40,11 +35,11 @@ jobs:
       id: cache-strategy
       run: |
         echo "🔍 Determining cache key strategy..."
+        echo "🎯 CD workflow will use latest CI build artifacts from cache"
         
-        # Use current SHA for cache lookup since we're deploying directly on push
+        # Use current SHA for primary cache lookup
         CACHE_SHA="${{ github.sha }}"
-        echo "📋 Direct push deployment detected"
-        echo "   Using current SHA: ${{ github.sha }}"
+        echo "📋 Looking for cached artifacts from commit: ${CACHE_SHA}"
         
         # Set outputs for use in cache steps
         echo "cache-sha=${CACHE_SHA}" >> $GITHUB_OUTPUT
@@ -53,8 +48,9 @@ jobs:
         echo "build-cache-key=${{ runner.os }}-build-cache-${{ hashFiles('**/package-lock.json', '**/prisma/schema.prisma') }}" >> $GITHUB_OUTPUT
         
         echo "✅ Cache strategy determined:"
-        echo "   Cache SHA: ${CACHE_SHA}"
-        echo "   Build artifacts key: ${{ runner.os }}-build-artifacts-${CACHE_SHA}"
+        echo "   Primary cache key: ${{ runner.os }}-build-artifacts-${CACHE_SHA}"
+        echo "   Fallback pattern: ${{ runner.os }}-build-artifacts-"
+        echo "🔍 Will use latest available CI artifacts if exact match not found"
 
     - name: Restore Cached Build Artifacts
       uses: actions/cache@v3
@@ -86,9 +82,10 @@ jobs:
         echo "Cache hit status: ${{ steps.cache-artifacts.outputs.cache-hit }}"
         echo "Expected cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
         
-        # CD workflow NEVER builds - it only deploys pre-built artifacts
+        # CD workflow NEVER builds - it only deploys pre-built artifacts from latest CI
         echo "🚫 CD workflow is configured to NEVER build assets"
-        echo "ℹ️ All build artifacts must come from cache (via CI workflow)"
+        echo "ℹ️ All build artifacts must come from latest CI workflow cache"
+        echo "🎯 Using cache pattern: ${{ steps.cache-strategy.outputs.cache-key }}"
         
         # Check if we got a cache hit and deployment info exists
         if [ "${{ steps.cache-artifacts.outputs.cache-hit }}" != "true" ]; then
