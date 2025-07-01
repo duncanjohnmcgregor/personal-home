@@ -291,12 +291,12 @@ export class BeatportService {
         id: purchase.id,
         track_id: trackId,
         user_id: session.user.id,
-        status: purchase.status as any,
-        price: purchase.price,
-        currency: purchase.currency,
+        status: purchase.status.toLowerCase() as any,
+        price: purchase.price || 0,
+        currency: purchase.currency || 'USD',
         created_at: purchase.createdAt,
-        completed_at: purchase.completedAt || undefined,
-        error_message: purchase.errorMessage || undefined,
+        completed_at: purchase.status === 'COMPLETED' ? purchase.updatedAt : undefined,
+        error_message: undefined,
       }
     } catch (error) {
       console.error('Error creating purchase:', error)
@@ -326,7 +326,7 @@ export class BeatportService {
         price: purchase.price || 0,
         currency: purchase.currency || 'USD',
         created_at: purchase.createdAt,
-        completed_at: undefined,
+        completed_at: purchase.status === 'COMPLETED' ? purchase.updatedAt : undefined,
         error_message: undefined,
       }
     } catch (error) {
@@ -378,7 +378,7 @@ export class BeatportService {
             price: p.price || 0,
             currency: p.currency || 'USD',
             created_at: p.createdAt,
-            completed_at: undefined,
+            completed_at: p.status === 'COMPLETED' ? p.updatedAt : undefined,
             error_message: undefined,
           })),
         total,
