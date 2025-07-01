@@ -22,7 +22,9 @@ export function useBPMBackground() {
     setJobs(bpmBackgroundService.getQueue())
     setStatus(bpmBackgroundService.getQueueStatus())
 
-    return unsubscribe
+    return () => {
+      unsubscribe()
+    }
   }, [])
 
   const addToQueue = useCallback((song: Song, priority: 'high' | 'normal' | 'low' = 'normal') => {
