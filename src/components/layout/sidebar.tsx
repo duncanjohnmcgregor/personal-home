@@ -27,7 +27,7 @@ const sidebarItems = [
     icon: Music,
   },
   {
-    title: "Organize Playlists",
+    title: "Organize Songs",
     href: "/dashboard/playlists/organize",
     icon: FolderOpen,
   },
