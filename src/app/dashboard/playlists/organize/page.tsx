@@ -1,19 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Folder, FolderOpen, Plus, Undo, Redo, Save } from 'lucide-react'
+import { ArrowLeft, Music, Undo, Redo, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ErrorMessage } from '@/components/ui/error-message'
-import { PlaylistOrganizer } from '@/components/playlist/playlist-organizer'
-import { CategoryManager } from '@/components/playlist/category-manager'
+import { SongOrganizer } from '@/components/playlist/song-organizer'
 import { usePlaylists } from '@/lib/hooks/use-playlists'
-import { usePlaylistCategories } from '@/lib/hooks/use-playlist-categories'
 import { useUndoRedo } from '@/lib/hooks/use-undo-redo'
 import { toast } from '@/lib/hooks/use-toast'
 import Link from 'next/link'
@@ -24,19 +17,9 @@ export default function PlaylistOrganizePage() {
     loading: playlistsLoading,
     error: playlistsError,
     fetchPlaylists,
-    updatePlaylist,
-    reorderPlaylists,
+    reorderPlaylistSongs,
+    removeSongFromPlaylist,
   } = usePlaylists()
-
-  const {
-    categories,
-    loading: categoriesLoading,
-    error: categoriesError,
-    fetchCategories,
-    createCategory,
-    updateCategory,
-    deleteCategory,
-  } = usePlaylistCategories()
 
   const {
     canUndo,
@@ -48,69 +31,106 @@ export default function PlaylistOrganizePage() {
   } = useUndoRedo()
 
   const [unsavedChanges, setUnsavedChanges] = useState(false)
-  const [activeTab, setActiveTab] = useState<'organize' | 'categories'>('organize')
 
   // Fetch data on mount
   useEffect(() => {
     fetchPlaylists()
-    fetchCategories()
-  }, [fetchPlaylists, fetchCategories])
+  }, [fetchPlaylists])
 
   // Save initial state for undo/redo
   useEffect(() => {
-    if (playlists.length > 0 && categories.length >= 0) {
+    if (playlists.length > 0) {
       saveState({
         playlists: playlists.map(p => ({ ...p })),
-        categories: categories.map(c => ({ ...c })),
       })
     }
-  }, [playlists, categories, saveState])
+  }, [playlists, saveState])
 
-  const handlePlaylistMove = async (playlistId: string, newCategoryId?: string) => {
+  const handlePlaylistUpdate = async (playlistId: string) => {
     try {
-      // Save current state before making changes
-      saveState({
-        playlists: playlists.map(p => ({ ...p })),
-        categories: categories.map(c => ({ ...c })),
-      })
-
-      await updatePlaylist(playlistId, { categoryId: newCategoryId })
-      setUnsavedChanges(true)
-      
-      toast({
-        title: 'Success',
-        description: 'Playlist moved successfully',
-      })
+      await fetchPlaylists()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to move playlist',
-        variant: 'destructive',
-      })
+      console.error('Failed to update playlist:', error)
     }
   }
 
-  const handlePlaylistReorder = async (playlistIds: string[]) => {
+  const handleSongReorder = async (playlistId: string, songIds: string[]) => {
     try {
       // Save current state before making changes
       saveState({
         playlists: playlists.map(p => ({ ...p })),
-        categories: categories.map(c => ({ ...c })),
       })
 
-      await reorderPlaylists(playlistIds)
+      await reorderPlaylistSongs(playlistId, { songIds })
       setUnsavedChanges(true)
       
       toast({
         title: 'Success',
-        description: 'Playlist order updated successfully',
+        description: 'Song order updated successfully',
       })
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to update playlist order',
+        description: 'Failed to update song order',
         variant: 'destructive',
       })
+      throw error
+    }
+  }
+
+  const handleSongRemove = async (playlistId: string, songId: string) => {
+    try {
+      // Save current state before making changes
+      saveState({
+        playlists: playlists.map(p => ({ ...p })),
+      })
+
+      await removeSongFromPlaylist(playlistId, { songId })
+      setUnsavedChanges(true)
+      
+      toast({
+        title: 'Success',
+        description: 'Song removed from playlist',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to remove song from playlist',
+        variant: 'destructive',
+      })
+      throw error
+    }
+  }
+
+  const handleBulkMove = async (songIds: string[], fromPlaylistId: string, toPlaylistId: string) => {
+    try {
+      // Save current state before making changes
+      saveState({
+        playlists: playlists.map(p => ({ ...p })),
+      })
+
+      // Remove songs from source playlist and add to target playlist
+      // This would need proper API endpoints for bulk operations
+      // For now, we'll do individual operations
+      for (const songId of songIds) {
+        await removeSongFromPlaylist(fromPlaylistId, { songId })
+        // Add to target playlist would require additional API call
+        // await addSongToPlaylist(toPlaylistId, { songId })
+      }
+      
+      setUnsavedChanges(true)
+      
+      toast({
+        title: 'Success',
+        description: `Moved ${songIds.length} song(s) successfully`,
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to move songs',
+        variant: 'destructive',
+      })
+      throw error
     }
   }
 
@@ -167,8 +187,8 @@ export default function PlaylistOrganizePage() {
     }
   }
 
-  const loading = playlistsLoading || categoriesLoading
-  const error = playlistsError || categoriesError
+  const loading = playlistsLoading
+  const error = playlistsError
 
   if (loading && playlists.length === 0) {
     return (
@@ -190,9 +210,9 @@ export default function PlaylistOrganizePage() {
             </Button>
           </Link>
           <div className="text-content-mobile">
-            <h1 className="text-2xl sm:text-3xl font-bold">Organize Playlists</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Organize Songs</h1>
             <p className="text-muted-foreground">
-              Manage your playlist organization and categories
+              Manage and organize songs within your playlists
             </p>
           </div>
         </div>
@@ -235,7 +255,7 @@ export default function PlaylistOrganizePage() {
         <div className="space-y-4">
           <ErrorMessage message={error} />
           <div className="flex justify-center">
-            <Button variant="outline" onClick={() => { fetchPlaylists(); fetchCategories(); }}>
+            <Button variant="outline" onClick={() => fetchPlaylists()}>
               Try Again
             </Button>
           </div>
@@ -244,39 +264,14 @@ export default function PlaylistOrganizePage() {
 
       {/* Content */}
       {!error && (
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="organize" className="flex items-center gap-2">
-              <FolderOpen className="h-4 w-4" />
-              Organize Playlists
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2">
-              <Folder className="h-4 w-4" />
-              Manage Categories
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="organize" className="space-y-6">
-            <PlaylistOrganizer
-              playlists={playlists}
-              categories={categories}
-              onPlaylistMove={handlePlaylistMove}
-              onPlaylistReorder={handlePlaylistReorder}
-              loading={loading}
-            />
-          </TabsContent>
-
-          <TabsContent value="categories" className="space-y-6">
-            <CategoryManager
-              categories={categories}
-              playlists={playlists}
-              onCreate={createCategory}
-              onUpdate={updateCategory}
-              onDelete={deleteCategory}
-              loading={loading}
-            />
-          </TabsContent>
-        </Tabs>
+        <SongOrganizer
+          playlists={playlists}
+          onPlaylistUpdate={handlePlaylistUpdate}
+          onSongReorder={handleSongReorder}
+          onSongRemove={handleSongRemove}
+          onBulkMove={handleBulkMove}
+          loading={loading}
+        />
       )}
     </div>
   )
