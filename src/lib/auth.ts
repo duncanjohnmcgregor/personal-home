@@ -56,6 +56,40 @@ const SoundCloudProvider = {
   },
 }
 
+// Custom Beatport OAuth Provider
+const BeatportProvider = {
+  id: 'beatport',
+  name: 'Beatport',
+  type: 'oauth',
+  authorization: {
+    url: 'https://oauth-api.beatport.com/authorize',
+    params: {
+      scope: 'user:read',
+      response_type: 'code',
+    },
+  },
+  token: 'https://oauth-api.beatport.com/token',
+  userinfo: 'https://oauth-api.beatport.com/user',
+  profile(profile: any) {
+    return {
+      id: profile.id.toString(),
+      name: profile.username || profile.display_name,
+      email: profile.email,
+      image: profile.avatar_url,
+    }
+  },
+  clientId: process.env.BEATPORT_CLIENT_ID!,
+  clientSecret: process.env.BEATPORT_CLIENT_SECRET!,
+  style: {
+    logo: '/beatport-logo.svg',
+    logoDark: '/beatport-logo.svg',
+    bg: '#01ff95',
+    text: '#000',
+    bgDark: '#01ff95',
+    textDark: '#000',
+  },
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma), // Now enabled with proper database setup
   session: {
@@ -72,6 +106,7 @@ export const authOptions: NextAuthOptions = {
       },
     }),
     SoundCloudProvider as any, // Custom provider
+    BeatportProvider as any, // Custom provider
   ],
   pages: {
     signIn: '/auth/signin',
@@ -79,10 +114,36 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      // Add custom sign-in validation here if needed
+      // Allow multiple provider connections for the same user
       try {
-        // Allow all providers with valid accounts
         if (account && user) {
+          // Check if user already exists with a different provider
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email || '' },
+            include: { accounts: true }
+          })
+
+          if (existingUser) {
+            // Check if this provider is already connected
+            const existingAccount = existingUser.accounts.find(
+              acc => acc.provider === account.provider
+            )
+            
+            if (existingAccount) {
+              // Update existing account with new tokens
+              await prisma.account.update({
+                where: { id: existingAccount.id },
+                data: {
+                  access_token: account.access_token,
+                  refresh_token: account.refresh_token,
+                  expires_at: account.expires_at,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                }
+              })
+            }
+            // If account doesn't exist, NextAuth will create it automatically
+          }
           return true
         }
         return false
@@ -94,6 +155,19 @@ export const authOptions: NextAuthOptions = {
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id
+        
+        // Fetch all connected accounts for the user
+        const userWithAccounts = await prisma.user.findUnique({
+          where: { id: user.id },
+          include: { accounts: true }
+        })
+
+        // Add connected providers to the session
+        session.connectedProviders = userWithAccounts?.accounts.map(account => ({
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+          hasValidToken: !!account.access_token
+        })) || []
       }
       return session
     },
@@ -101,6 +175,7 @@ export const authOptions: NextAuthOptions = {
       if (account) {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
+        token.provider = account.provider
       }
       return token
     },
