@@ -148,7 +148,6 @@ export async function updateProviderTokens(
         access_token: tokens.accessToken,
         refresh_token: tokens.refreshToken,
         expires_at: tokens.expiresAt,
-        updatedAt: new Date(),
       },
     })
 
