@@ -316,6 +316,7 @@ export default function PlaylistDetailPage() {
         onOpenChange={setShowAddSongs}
         playlistId={playlist.id}
         playlistName={playlist.name}
+        onSongAdded={() => fetchPlaylist(playlist.id)}
       />
     </div>
   )

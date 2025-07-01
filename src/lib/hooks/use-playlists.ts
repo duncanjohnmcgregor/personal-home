@@ -152,15 +152,13 @@ export function usePlaylists(): UsePlaylistsResult {
         throw new Error(errorData.error || 'Failed to add song to playlist')
       }
       
-      // Refresh the specific playlist
-      await fetchPlaylists()
-      
+      // Don't refresh all playlists, let the calling component handle the refresh
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
       return false
     }
-  }, [fetchPlaylists])
+  }, [])
 
   const removeSongFromPlaylist = useCallback(async (playlistId: string, data: RemoveSongFromPlaylistData): Promise<boolean> => {
     setError(null)
@@ -179,15 +177,13 @@ export function usePlaylists(): UsePlaylistsResult {
         throw new Error(errorData.error || 'Failed to remove song from playlist')
       }
       
-      // Refresh the specific playlist
-      await fetchPlaylists()
-      
+      // Don't refresh all playlists, let the calling component handle the refresh
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
       return false
     }
-  }, [fetchPlaylists])
+  }, [])
 
   return {
     playlists,

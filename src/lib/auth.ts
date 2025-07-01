@@ -81,8 +81,8 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       // Add custom sign-in validation here if needed
       try {
-        // Ensure we have a valid Spotify account
-        if (account?.provider === 'spotify' && account?.access_token) {
+        // Allow all providers with valid accounts
+        if (account && user) {
           return true
         }
         return false

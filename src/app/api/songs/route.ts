@@ -33,15 +33,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if song with Spotify ID already exists
+    // Check if song already exists by platform ID
+    let existingSong = null
+    
     if (spotifyId) {
-      const existingSong = await prisma.song.findUnique({
+      existingSong = await prisma.song.findUnique({
         where: { spotifyId }
       })
-      
-      if (existingSong) {
-        return NextResponse.json(existingSong)
-      }
+    } else if (soundcloudId) {
+      existingSong = await prisma.song.findFirst({
+        where: { soundcloudId }
+      })
+    } else if (beatportId) {
+      existingSong = await prisma.song.findFirst({
+        where: { beatportId }
+      })
+    }
+    
+    if (existingSong) {
+      return NextResponse.json(existingSong)
     }
 
     // Create new song
