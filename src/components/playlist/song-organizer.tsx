@@ -252,7 +252,7 @@ export function SongOrganizer({
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="h-5 w-5" />
-                Organize Songs in "{playlist.name}"
+                Organize Songs in &quot;{playlist.name}&quot;
               </div>
               <div className="flex items-center gap-2">
                 <Button
