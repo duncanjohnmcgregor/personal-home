@@ -15,6 +15,47 @@ const spotifyScopes = [
   'user-library-modify',
 ].join(' ')
 
+// SoundCloud scopes for basic access
+const soundcloudScopes = [
+  'non-expiring',
+].join(' ')
+
+// Custom SoundCloud OAuth Provider
+const SoundCloudProvider = {
+  id: 'soundcloud',
+  name: 'SoundCloud',
+  type: 'oauth',
+  authorization: {
+    url: 'https://secure.soundcloud.com/authorize',
+    params: {
+      scope: soundcloudScopes,
+      response_type: 'code',
+      // PKCE parameters will be added automatically by NextAuth
+    },
+  },
+  token: 'https://secure.soundcloud.com/oauth/token',
+  userinfo: 'https://api.soundcloud.com/me',
+  checks: ['pkce', 'state'], // OAuth 2.1 with PKCE requirement
+  profile(profile: any) {
+    return {
+      id: profile.id.toString(),
+      name: profile.username || profile.full_name,
+      email: profile.email,
+      image: profile.avatar_url,
+    }
+  },
+  clientId: process.env.SOUNDCLOUD_CLIENT_ID!,
+  clientSecret: process.env.SOUNDCLOUD_CLIENT_SECRET!,
+  style: {
+    logo: '/soundcloud-logo.svg',
+    logoDark: '/soundcloud-logo.svg',
+    bg: '#ff5500',
+    text: '#fff',
+    bgDark: '#ff5500',
+    textDark: '#fff',
+  },
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma), // Now enabled with proper database setup
   session: {
@@ -30,6 +71,7 @@ export const authOptions: NextAuthOptions = {
         },
       },
     }),
+    SoundCloudProvider as any, // Custom provider
   ],
   pages: {
     signIn: '/auth/signin',
