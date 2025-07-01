@@ -157,7 +157,8 @@ export function SongOrganizer({
     if (!confirmed) return
 
     try {
-      for (const songId of selectedSongs) {
+      const songIdsArray: string[] = Array.from(selectedSongs)
+      for (const songId of songIdsArray) {
         await onSongRemove(selectedPlaylist, songId)
       }
       setSelectedSongs(new Set())
