@@ -24,8 +24,15 @@ jobs:
       run: npm ci
 
     - name: Validate Database Schema
+      env:
+        # Provide dummy environment variables for schema validation
+        # These are not real connections - just needed for Prisma validation
+        POSTGRES_PRISMA_URL: "postgresql://dummy:dummy@localhost:5432/dummy?pgbouncer=true&connection_limit=1"
+        POSTGRES_URL_NON_POOLING: "postgresql://dummy:dummy@localhost:5432/dummy"
+        NEXTAUTH_SECRET: "dummy-secret-for-ci-validation"
       run: |
         echo "🔍 Validating Prisma schema..."
+        echo "ℹ️ Using dummy environment variables for validation (no real database connection needed)"
         
         # Check schema syntax
         if npx prisma validate; then
@@ -73,6 +80,11 @@ jobs:
       run: npm run lint
 
     - name: Test Database Schema Generation
+      env:
+        # Use same dummy variables for type testing
+        POSTGRES_PRISMA_URL: "postgresql://dummy:dummy@localhost:5432/dummy?pgbouncer=true&connection_limit=1"
+        POSTGRES_URL_NON_POOLING: "postgresql://dummy:dummy@localhost:5432/dummy"
+        NEXTAUTH_SECRET: "dummy-secret-for-ci-validation"
       run: |
         echo "🧪 Testing database schema generation..."
         
@@ -106,6 +118,24 @@ jobs:
             data: {
               title: 'Test Song',
               artist: 'Test Artist'
+            }
+          }
+          
+          // Test newer models from latest migration
+          const playlistSync: Parameters<typeof prisma.playlistSync.create>[0] = {
+            data: {
+              playlistId: 'test-playlist-id',
+              platform: 'SPOTIFY'
+            }
+          }
+          
+          const importHistory: Parameters<typeof prisma.importHistory.create>[0] = {
+            data: {
+              userId: 'test-user-id',
+              spotifyPlaylistId: 'test-spotify-id',
+              playlistName: 'Test Import',
+              totalTracks: 10,
+              importedTracks: 8
             }
           }
           
@@ -171,13 +201,14 @@ jobs:
         echo "=============="
         if [ "${{ job.status }}" == "success" ]; then
           echo "✅ All checks passed:"
-          echo "  ✅ Database schema validation"
-          echo "  ✅ TypeScript type checking"
+          echo "  ✅ Database schema validation (syntax and structure)"
+          echo "  ✅ TypeScript type checking (including latest schema changes)"
           echo "  ✅ ESLint code quality"
           echo "  ✅ Application build"
           echo "  ✅ Build artifacts validation"
           echo ""
           echo "🚀 Ready for deployment!"
+          echo "ℹ️ Note: Database schema validated with dummy connections (real DB testing happens in production deployment)"
         else
           echo "❌ CI checks failed"
           echo "Please review the logs above for detailed error information"
