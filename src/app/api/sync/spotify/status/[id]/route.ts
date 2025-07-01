@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { SpotifySyncService } from '@/lib/sync'
 import { Platform } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
+
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,

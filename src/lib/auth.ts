@@ -181,12 +181,24 @@ export const authOptions: NextAuthOptions = {
     },
     async redirect({ url, baseUrl }) {
       // Handle redirects after authentication
+      // Ensure baseUrl is valid during static generation
+      const validBaseUrl = baseUrl || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+      
       if (url.startsWith('/')) {
-        return `${baseUrl}${url}`
-      } else if (new URL(url).origin === baseUrl) {
-        return url
+        return `${validBaseUrl}${url}`
+      } else if (url && validBaseUrl) {
+        try {
+          const urlObj = new URL(url)
+          const baseUrlObj = new URL(validBaseUrl)
+          if (urlObj.origin === baseUrlObj.origin) {
+            return url
+          }
+        } catch (error) {
+          // If URL parsing fails, return baseUrl
+          console.warn('Invalid URL in redirect callback:', { url, baseUrl: validBaseUrl })
+        }
       }
-      return baseUrl
+      return validBaseUrl
     },
   },
 }

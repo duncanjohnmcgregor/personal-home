@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { SpotifyService } from '@/lib/spotify'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { Song } from '@/types'
+
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,

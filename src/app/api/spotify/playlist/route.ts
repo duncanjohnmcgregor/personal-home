@@ -3,6 +3,9 @@ import { SpotifyService } from '@/lib/spotify'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
