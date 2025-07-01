@@ -108,7 +108,7 @@ export function AddSongsDialog({
         return newSet
       })
     }
-  }, [playlistId, playlistName, addSongToPlaylist])
+  }, [playlistId, playlistName, addSongToPlaylist, onSongAdded])
 
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null)

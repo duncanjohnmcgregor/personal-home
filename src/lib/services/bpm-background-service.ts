@@ -169,7 +169,7 @@ export class BPMBackgroundService {
       
       let source: MediaElementAudioSourceNode | null = null
       let resolved = false
-      let bpmResults: Array<{ bpm: number; confidence: number; timestamp: number }> = []
+      const bpmResults: Array<{ bpm: number; confidence: number; timestamp: number }> = []
       
       const cleanup = () => {
         if (source) {
