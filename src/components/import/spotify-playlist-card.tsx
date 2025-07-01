@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -37,13 +37,15 @@ interface SpotifyPlaylistCardProps {
   selected: boolean
   onToggleSelect: () => void
   importing?: boolean
+  queued?: boolean
 }
 
 export function SpotifyPlaylistCard({
   playlist,
   selected,
   onToggleSelect,
-  importing = false
+  importing = false,
+  queued = false
 }: SpotifyPlaylistCardProps) {
   const [imageError, setImageError] = useState(false)
   
@@ -68,32 +70,42 @@ export function SpotifyPlaylistCard({
     <Card 
       className={`relative cursor-pointer transition-all duration-200 hover:shadow-md ${
         selected ? 'ring-2 ring-primary' : ''
-      } ${importing ? 'opacity-50' : ''}`}
+      } ${importing ? 'opacity-50' : ''} ${queued ? 'ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' : ''}`}
       onClick={handleCardClick}
     >
-      {importing && (
+      {(importing || queued) && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10 rounded-lg">
           <div className="flex items-center space-x-2">
-            <LoadingSpinner className="w-4 h-4" />
-            <span className="text-sm font-medium">Importing...</span>
+            {importing ? (
+              <div className="flex items-center space-x-2">
+                <LoadingSpinner className="w-4 h-4" />
+                <span className="text-sm font-medium">Importing...</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium">Queued</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-2">
+      <CardHeader className="pb-2 space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start space-x-2 flex-1 min-w-0">
             <Checkbox
               checked={selected}
               onCheckedChange={handleCheckboxChange}
               disabled={importing}
               onClick={(e) => e.stopPropagation()}
+              className="mt-0.5"
             />
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg line-clamp-1" title={playlist.name}>
+              <CardTitle className="text-base leading-tight line-clamp-1" title={playlist.name}>
                 {playlist.name}
               </CardTitle>
-              <p className="text-sm text-muted-foreground line-clamp-1">
+              <p className="text-xs text-muted-foreground line-clamp-1">
                 by {playlist.owner.display_name}
               </p>
             </div>
@@ -102,18 +114,18 @@ export function SpotifyPlaylistCard({
             href={playlist.external_urls.spotify}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-1 hover:bg-muted rounded-sm transition-colors"
+            className="p-1 hover:bg-muted rounded-sm transition-colors flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
             title="Open in Spotify"
           >
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Playlist Image */}
-        <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-muted">
+      <CardContent className="space-y-3 pt-0">
+        {/* Compact Playlist Image */}
+        <div className="relative w-full aspect-square rounded-md overflow-hidden bg-muted max-w-24 mx-auto">
           {playlistImage && !imageError ? (
             <Image
               src={playlistImage}
@@ -124,43 +136,34 @@ export function SpotifyPlaylistCard({
             />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <Music className="w-12 h-12 text-muted-foreground" />
+              <Music className="w-8 h-8 text-muted-foreground" />
             </div>
           )}
         </div>
 
-        {/* Playlist Description */}
-        {playlist.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {playlist.description}
-          </p>
-        )}
-
-        {/* Playlist Stats and Badges */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center space-x-1 text-muted-foreground">
-              <Music className="w-4 h-4" />
-              <span>{trackCount} track{trackCount !== 1 ? 's' : ''}</span>
-            </div>
+        {/* Compact Playlist Stats */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-center text-xs text-muted-foreground">
+            <Music className="w-3 h-3 mr-1" />
+            <span>{trackCount} track{trackCount !== 1 ? 's' : ''}</span>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-1">
             {playlist.collaborative && (
-              <Badge variant="secondary" className="text-xs">
-                <Users className="w-3 h-3 mr-1" />
-                Collaborative
+              <Badge variant="secondary" className="text-xs px-1 py-0">
+                <Users className="w-2 h-2 mr-1" />
+                Collab
               </Badge>
             )}
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs px-1 py-0">
               {playlist.public ? (
                 <>
-                  <Globe className="w-3 h-3 mr-1" />
+                  <Globe className="w-2 h-2 mr-1" />
                   Public
                 </>
               ) : (
                 <>
-                  <Lock className="w-3 h-3 mr-1" />
+                  <Lock className="w-2 h-2 mr-1" />
                   Private
                 </>
               )}
