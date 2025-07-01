@@ -5,7 +5,8 @@ import {
   CreatePlaylistData, 
   UpdatePlaylistData,
   AddSongToPlaylistData,
-  RemoveSongFromPlaylistData
+  RemoveSongFromPlaylistData,
+  ReorderPlaylistSongsData
 } from '@/types/playlist'
 
 interface UsePlaylistsResult {
@@ -24,6 +25,7 @@ interface UsePlaylistsResult {
   deletePlaylist: (id: string) => Promise<boolean>
   addSongToPlaylist: (playlistId: string, data: AddSongToPlaylistData) => Promise<boolean>
   removeSongFromPlaylist: (playlistId: string, data: RemoveSongFromPlaylistData) => Promise<boolean>
+  reorderPlaylistSongs: (playlistId: string, data: ReorderPlaylistSongsData) => Promise<Playlist | null>
 }
 
 export function usePlaylists(): UsePlaylistsResult {
@@ -189,6 +191,35 @@ export function usePlaylists(): UsePlaylistsResult {
     }
   }, [fetchPlaylists])
 
+  const reorderPlaylistSongs = useCallback(async (playlistId: string, data: ReorderPlaylistSongsData): Promise<Playlist | null> => {
+    setError(null)
+    
+    try {
+      const response = await fetch(`/api/playlists/${playlistId}/songs/reorder`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to reorder playlist songs')
+      }
+      
+      const updatedPlaylist: Playlist = await response.json()
+      
+      // Update the playlist in the local state
+      setPlaylists(prev => prev.map(p => p.id === playlistId ? updatedPlaylist : p))
+      
+      return updatedPlaylist
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      return null
+    }
+  }, [])
+
   return {
     playlists,
     loading,
@@ -200,6 +231,7 @@ export function usePlaylists(): UsePlaylistsResult {
     deletePlaylist,
     addSongToPlaylist,
     removeSongFromPlaylist,
+    reorderPlaylistSongs,
   }
 }
 
