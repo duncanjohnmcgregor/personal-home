@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react'
+import { type ToastActionElement } from '@/components/ui/toast'
 
 export interface ToastData {
   title: string
   description?: string
   variant?: 'default' | 'destructive'
+  action?: ToastActionElement
 }
 
 interface ToastState extends ToastData {
