@@ -1,7 +1,10 @@
-name: Continuous Deployment
+THIS SHOULD BE A LINTER ERRORname: Continuous Deployment
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types:
+      - completed
     branches: [ main ]
   workflow_dispatch: # Allow manual deployment
 
@@ -9,6 +12,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    # Only run if CI completed successfully, or if manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     
     env:
       POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
@@ -75,129 +80,90 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-cache-
 
-    - name: Verify Cached Artifacts or Build
+    - name: Verify Required Cached Artifacts
       run: |
-        echo "🔍 Verifying cached artifacts..."
+        echo "🔍 Verifying required cached artifacts..."
         echo "Cache hit status: ${{ steps.cache-artifacts.outputs.cache-hit }}"
         echo "Expected cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
         
+        # CD workflow NEVER builds - it only deploys pre-built artifacts
+        echo "🚫 CD workflow is configured to NEVER build assets"
+        echo "ℹ️ All build artifacts must come from cache (via CI workflow)"
+        
         # Check if we got a cache hit and deployment info exists
-        if [ "${{ steps.cache-artifacts.outputs.cache-hit }}" == "true" ] && [ -f "deployment-info.json" ]; then
-          echo "✅ Cache hit! Using cached build artifacts."
+        if [ "${{ steps.cache-artifacts.outputs.cache-hit }}" != "true" ]; then
           echo ""
-          echo "📋 Cached Deployment Info:"
-          cat deployment-info.json | jq '.' 2>/dev/null || cat deployment-info.json
-          
-          # Verify critical cached artifacts exist and are valid
-          if [ ! -d ".next" ]; then
-            echo "❌ Critical: .next directory missing from cache"
-            NEEDS_REBUILD=true
-          elif [ ! -f ".next/BUILD_ID" ]; then
-            echo "❌ Critical: BUILD_ID missing from cache"
-            NEEDS_REBUILD=true
-          elif [ ! -d "node_modules/.prisma" ]; then
-            echo "❌ Critical: Prisma client missing from cache"
-            NEEDS_REBUILD=true
-          elif [ ! -d "node_modules" ]; then
-            echo "❌ Critical: node_modules missing from cache"
-            NEEDS_REBUILD=true
-          else
-            echo "✅ All cached artifacts verified successfully"
-            echo "🚀 Ready for fast deployment!"
-            NEEDS_REBUILD=false
-          fi
-        else
-          echo "⚠️ Cache miss occurred! Details:"
+          echo "❌ DEPLOYMENT FAILED: No cached build artifacts found"
+          echo ""
+          echo "🔍 Cache miss details:"
           echo "   Cache hit: ${{ steps.cache-artifacts.outputs.cache-hit }}"
           echo "   Deployment info exists: $(test -f deployment-info.json && echo 'yes' || echo 'no')"
           echo "   Expected cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
           echo ""
-          echo "🔍 Possible causes:"
-          echo "   1. First deployment or cache expired"
-          echo "   2. Dependencies or schema changed"
-          echo "   3. Cache was evicted due to storage limits"
+          echo "� Required steps to fix:"
+          echo "   1. Ensure CI workflow completed successfully on this commit"
+          echo "   2. Check that CI workflow caches build artifacts properly"
+          echo "   3. Verify cache key consistency between CI and CD workflows"
+          echo "   4. Re-run CI workflow if needed to generate cached artifacts"
           echo ""
-          echo "ℹ️ Will build fresh artifacts for deployment..."
-          NEEDS_REBUILD=true
+          echo "🚫 CD workflow will NOT build assets - deployment aborted"
+          exit 1
         fi
         
-        if [ "$NEEDS_REBUILD" == "true" ]; then
+        if [ ! -f "deployment-info.json" ]; then
           echo ""
-          echo "🏗️ Rebuilding application artifacts..."
-          
-          # Install dependencies if not cached properly
-          if [ ! -d "node_modules" ] || [ ! -f "node_modules/.package-lock.json" ]; then
-            echo "📦 Installing dependencies..."
-            npm ci
-          else
-            echo "✅ Dependencies already available"
-          fi
-          
-          # Generate Prisma client if not cached properly
-          if [ ! -d "node_modules/.prisma" ]; then
-            echo "🔧 Generating Prisma client..."
-            npx prisma generate
-          else
-            echo "✅ Prisma client already available"
-          fi
-          
-          # Build application if not cached properly
-          if [ ! -d ".next" ] || [ ! -f ".next/BUILD_ID" ]; then
-            echo "🏗️ Building Next.js application..."
-            npm run build
-          else
-            echo "✅ Next.js build already available"
-          fi
-          
-          # Create deployment info for tracking
-          echo "📋 Creating fresh deployment info..."
-          cat > deployment-info.json << EOF
-        {
-          "buildId": "$(cat .next/BUILD_ID 2>/dev/null || echo 'fresh-build')",
-          "nodeVersion": "$(node --version)",
-          "npmVersion": "$(npm --version)",
-          "timestamp": "$(date -u -Iseconds)",
-          "gitCommit": "${{ steps.cache-strategy.outputs.cache-sha }}",
-          "gitRef": "${{ github.ref }}",
-          "prismaVersion": "$(npx prisma --version | head -n1)",
-          "cacheKeys": {
-            "nodeModules": "${{ steps.cache-strategy.outputs.node-cache-key }}",
-            "buildArtifacts": "${{ steps.cache-strategy.outputs.cache-key }}"
-          },
-          "rebuildReason": "Cache miss - fresh build required"
-        }
-        EOF
-          
-          echo "✅ Fresh build completed successfully"
+          echo "❌ DEPLOYMENT FAILED: Deployment info missing from cache"
+          echo "� Cache appears incomplete - CI workflow may not have completed properly"
+          exit 1
         fi
         
-        # Final verification that all required artifacts exist
+        echo "✅ Cache hit confirmed! Using cached build artifacts."
         echo ""
-        echo "🔍 Final artifact verification..."
+        echo "📋 Cached Deployment Info:"
+        cat deployment-info.json | jq '.' 2>/dev/null || cat deployment-info.json
+        
+        # Verify critical cached artifacts exist and are valid
+        MISSING_ARTIFACTS=()
         
         if [ ! -d ".next" ]; then
-          echo "❌ Build artifacts missing: .next directory not found"
-          exit 1
+          MISSING_ARTIFACTS+=(".next directory")
+        fi
+        
+        if [ ! -f ".next/BUILD_ID" ]; then
+          MISSING_ARTIFACTS+=("BUILD_ID file")
         fi
         
         if [ ! -d "node_modules/.prisma" ]; then
-          echo "❌ Prisma client missing: node_modules/.prisma not found" 
-          exit 1
+          MISSING_ARTIFACTS+=("Prisma client")
         fi
         
         if [ ! -d "node_modules" ]; then
-          echo "❌ Dependencies missing: node_modules not found"
+          MISSING_ARTIFACTS+=("node_modules")
+        fi
+        
+        if [ ${#MISSING_ARTIFACTS[@]} -gt 0 ]; then
+          echo ""
+          echo "❌ DEPLOYMENT FAILED: Critical artifacts missing from cache"
+          echo ""
+          echo "🔍 Missing artifacts:"
+          for artifact in "${MISSING_ARTIFACTS[@]}"; do
+            echo "   - $artifact"
+          done
+          echo ""
+          echo "💡 This indicates the CI workflow cache is incomplete or corrupted"
+          echo "🔧 Solution: Re-run the CI workflow to generate complete cached artifacts"
+          echo "🚫 CD workflow will NOT build missing artifacts - deployment aborted"
           exit 1
         fi
         
-        echo "✅ All deployment artifacts verified and ready"
+        echo ""
+        echo "✅ All cached artifacts verified successfully"
+        echo "🚀 Ready for cache-only deployment!"
         echo ""
         echo "📊 Deployment Performance Summary:"
-        if [ "${{ steps.cache-artifacts.outputs.cache-hit }}" == "true" ]; then
-          echo "   ⚡ Used cached artifacts (fast deployment)"
-        else
-          echo "   🏗️ Built fresh artifacts (standard deployment)"
-        fi
+        echo "   ⚡ Using cached artifacts (ultra-fast deployment)"
+        echo "   🚫 No build process executed (cache-only deployment)"
+        echo "   📦 Cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
 
     - name: Install Vercel CLI
       run: |
