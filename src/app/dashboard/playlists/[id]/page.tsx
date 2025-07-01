@@ -36,6 +36,7 @@ export default function PlaylistDetailPage() {
   const [showEditForm, setShowEditForm] = useState(false)
   const [showAddSongs, setShowAddSongs] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null)
 
   // Fetch playlist on mount
   useEffect(() => {
@@ -44,13 +45,91 @@ export default function PlaylistDetailPage() {
     }
   }, [playlistId, fetchPlaylist])
 
-  const handlePlay = (playlistSong: PlaylistSong) => {
-    if (currentSong === playlistSong.song.id) {
-      setIsPlaying(!isPlaying)
-    } else {
-      setCurrentSong(playlistSong.song.id)
-      setIsPlaying(true)
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (currentAudio) {
+        currentAudio.pause()
+        currentAudio.src = ''
+      }
     }
+  }, [currentAudio])
+
+  const handlePlay = (playlistSong: PlaylistSong) => {
+    const song = playlistSong.song
+    
+    // If no preview URL available, show a message
+    if (!song.previewUrl) {
+      toast({
+        title: 'No preview available',
+        description: 'This track does not have a preview available.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // If clicking the same song
+    if (currentSong === song.id && currentAudio) {
+      if (isPlaying) {
+        currentAudio.pause()
+        setIsPlaying(false)
+      } else {
+        currentAudio.play()
+          .then(() => setIsPlaying(true))
+          .catch((error: any) => {
+            console.error('Error playing audio:', error)
+            toast({
+              title: 'Playback error',
+              description: 'Unable to play the audio preview.',
+              variant: 'destructive',
+            })
+          })
+      }
+      return
+    }
+
+    // Stop current audio if playing
+    if (currentAudio) {
+      currentAudio.pause()
+      currentAudio.src = ''
+    }
+
+    // Create new audio element
+    const audio = new Audio(song.previewUrl)
+    audio.volume = 0.7
+    
+    audio.onended = () => {
+      setIsPlaying(false)
+      setCurrentSong(null)
+      setCurrentAudio(null)
+    }
+    
+    audio.onerror = () => {
+      setIsPlaying(false)
+      setCurrentSong(null)
+      setCurrentAudio(null)
+      toast({
+        title: 'Playback error',
+        description: 'Unable to load the audio preview.',
+        variant: 'destructive',
+      })
+    }
+
+    // Play the audio
+    audio.play()
+      .then(() => {
+        setCurrentAudio(audio)
+        setCurrentSong(song.id)
+        setIsPlaying(true)
+      })
+      .catch((error: any) => {
+        console.error('Error playing audio:', error)
+        toast({
+          title: 'Playback error',
+          description: 'Unable to play the audio preview.',
+          variant: 'destructive',
+        })
+      })
   }
 
   const handleRemoveSong = async (playlistSong: PlaylistSong) => {

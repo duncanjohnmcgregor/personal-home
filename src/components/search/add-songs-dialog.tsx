@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -105,13 +105,92 @@ export function AddSongsDialog({
     }
   }, [playlistId, playlistName, addSongToPlaylist])
 
-  const handlePlay = useCallback((track: SearchTrack) => {
-    // This would integrate with a music player
-    // For now, we'll just open the external URL if available
-    if (track.url) {
-      window.open(track.url, '_blank')
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null)
+
+  // Cleanup audio when dialog closes
+  useEffect(() => {
+    if (!open && currentAudio) {
+      currentAudio.pause()
+      currentAudio.src = ''
+      setCurrentAudio(null)
+      setCurrentlyPlaying(null)
     }
-  }, [])
+  }, [open, currentAudio])
+
+  const handlePlay = useCallback((track: SearchTrack) => {
+    // If no preview URL available, open external URL if available
+    if (!track.previewUrl) {
+      if (track.url) {
+        window.open(track.url, '_blank')
+      } else {
+        toast({
+          title: 'No preview available',
+          description: 'This track does not have a preview available.',
+          variant: 'destructive',
+        })
+      }
+      return
+    }
+
+    // If clicking the same track
+    if (currentlyPlaying === track.id && currentAudio) {
+      if (currentAudio.paused) {
+        currentAudio.play()
+          .catch((error: any) => {
+            console.error('Error playing audio:', error)
+            toast({
+              title: 'Playback error',
+              description: 'Unable to play the audio preview.',
+              variant: 'destructive',
+            })
+          })
+      } else {
+        currentAudio.pause()
+      }
+      return
+    }
+
+    // Stop current audio if playing
+    if (currentAudio) {
+      currentAudio.pause()
+      currentAudio.src = ''
+    }
+
+    // Create new audio element
+    const audio = new Audio(track.previewUrl)
+    audio.volume = 0.7
+    
+    audio.onended = () => {
+      setCurrentlyPlaying(null)
+      setCurrentAudio(null)
+    }
+    
+    audio.onerror = () => {
+      setCurrentlyPlaying(null)
+      setCurrentAudio(null)
+      toast({
+        title: 'Playback error',
+        description: 'Unable to load the audio preview.',
+        variant: 'destructive',
+      })
+    }
+
+    // Play the audio
+    audio.play()
+      .then(() => {
+        setCurrentAudio(audio)
+        setCurrentlyPlaying(track.id)
+      })
+      .catch((error: any) => {
+        console.error('Error playing audio:', error)
+        toast({
+          title: 'Playback error',
+          description: 'Unable to play the audio preview.',
+          variant: 'destructive',
+        })
+      })
+  }, [currentlyPlaying, currentAudio])
 
   const handleClose = () => {
     clearSearch()
@@ -149,6 +228,7 @@ export function AddSongsDialog({
               totalResults={totalResults}
               onAddToPlaylist={handleAddToPlaylist}
               onPlay={handlePlay}
+              currentlyPlaying={currentlyPlaying || undefined}
             />
           </div>
         </div>
