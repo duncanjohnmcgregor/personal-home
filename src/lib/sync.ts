@@ -119,7 +119,7 @@ export class SpotifySyncService {
       })
 
       let spotifyPlaylist
-      let stats = {
+      const stats = {
         total: playlist.songs.length,
         success: 0,
         conflicts: 0,
