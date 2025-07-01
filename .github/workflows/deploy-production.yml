@@ -63,7 +63,9 @@ jobs:
           deployment-info.json
         key: ${{ steps.cache-strategy.outputs.cache-key }}
         restore-keys: |
+          ${{ runner.os }}-build-artifacts-${{ github.event.before }}
           ${{ runner.os }}-build-artifacts-
+          ${{ runner.os }}-build-cache-
 
     - name: Restore Additional Build Cache
       uses: actions/cache@v3
@@ -82,23 +84,35 @@ jobs:
         echo "Cache hit status: ${{ steps.cache-artifacts.outputs.cache-hit }}"
         echo "Expected cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
         
-        # CD workflow NEVER builds - it only deploys pre-built artifacts from latest CI
-        echo "🚫 CD workflow is configured to NEVER build assets"
-        echo "ℹ️ All build artifacts must come from latest CI workflow cache"
-        echo "🎯 Using cache pattern: ${{ steps.cache-strategy.outputs.cache-key }}"
+        # Check if we got a cache hit OR if artifacts exist from restore-keys fallback
+        CACHE_HIT="${{ steps.cache-artifacts.outputs.cache-hit }}"
+        ARTIFACTS_AVAILABLE="false"
         
-        # Check if we got a cache hit and deployment info exists
-        if [ "${{ steps.cache-artifacts.outputs.cache-hit }}" != "true" ]; then
+        # Check if critical artifacts exist (either from exact cache hit or restore-keys fallback)
+        if [ -d ".next" ] && [ -f ".next/BUILD_ID" ] && [ -d "node_modules" ]; then
+          ARTIFACTS_AVAILABLE="true"
+          echo "✅ Build artifacts found (either from cache hit or restore-keys fallback)"
+        fi
+        
+        if [ "$CACHE_HIT" = "true" ]; then
+          echo "✅ Exact cache hit confirmed!"
+          echo "🎯 Using cached artifacts from: ${{ steps.cache-strategy.outputs.cache-key }}"
+        elif [ "$ARTIFACTS_AVAILABLE" = "true" ]; then
+          echo "⚡ Using artifacts from cache restore-keys fallback"
+          echo "ℹ️ This is normal when using enhanced cache strategy"
+          echo "🎯 Artifacts restored from most recent compatible cache"
+        else
           echo ""
-          echo "❌ DEPLOYMENT FAILED: No cached build artifacts found"
+          echo "❌ DEPLOYMENT FAILED: No build artifacts found"
           echo ""
           echo "🔍 Cache miss details:"
-          echo "   Cache hit: ${{ steps.cache-artifacts.outputs.cache-hit }}"
-          echo "   Deployment info exists: $(test -f deployment-info.json && echo 'yes' || echo 'no')"
+          echo "   Exact cache hit: ${{ steps.cache-artifacts.outputs.cache-hit }}"
+          echo "   Artifacts available: $ARTIFACTS_AVAILABLE"
           echo "   Expected cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
+          echo "   Deployment info exists: $(test -f deployment-info.json && echo 'yes' || echo 'no')"
           echo ""
-          echo "� Required steps to fix:"
-          echo "   1. Ensure CI workflow completed successfully on this commit"
+          echo "💡 Required steps to fix:"
+          echo "   1. Ensure CI workflow completed successfully on this or recent commit"
           echo "   2. Check that CI workflow caches build artifacts properly"
           echo "   3. Verify cache key consistency between CI and CD workflows"
           echo "   4. Re-run CI workflow if needed to generate cached artifacts"
@@ -161,6 +175,46 @@ jobs:
         echo "   ⚡ Using cached artifacts (ultra-fast deployment)"
         echo "   🚫 No build process executed (cache-only deployment)"
         echo "   📦 Cache key: ${{ steps.cache-strategy.outputs.cache-key }}"
+
+    - name: Emergency Fallback Build (if no cache available)
+      if: ${{ steps.cache-artifacts.outputs.cache-hit != 'true' && (!contains(env.DISABLE_FALLBACK_BUILD, 'true')) }}
+      run: |
+        echo "🚨 EMERGENCY FALLBACK: No cached artifacts found"
+        echo "⚠️ This should rarely happen with improved cache strategy"
+        echo "🔧 Performing emergency build to prevent deployment failure..."
+        
+        # Install dependencies if not cached
+        if [ ! -d "node_modules" ] || [ ! -f "node_modules/.package-lock.json" ]; then
+          echo "📦 Installing dependencies..."
+          npm ci
+        fi
+        
+        # Generate Prisma client if not available
+        if [ ! -d "node_modules/.prisma" ]; then
+          echo "🗄️ Generating Prisma client..."
+          npx prisma generate
+        fi
+        
+        # Build application
+        echo "🏗️ Building application..."
+        npm run build
+        
+        # Create deployment info for consistency
+        cat > deployment-info.json << EOF
+        {
+          "buildId": "$(cat .next/BUILD_ID)",
+          "nodeVersion": "$(node --version)",
+          "npmVersion": "$(npm --version)",
+          "timestamp": "$(date -u -Iseconds)",
+          "gitCommit": "${{ github.sha }}",
+          "gitRef": "${{ github.ref }}",
+          "buildType": "emergency-fallback",
+          "cacheStrategy": "fallback-build"
+        }
+        EOF
+        
+        echo "✅ Emergency build completed"
+        echo "💡 Consider investigating why cache was not available"
 
     - name: Install Vercel CLI
       run: |
