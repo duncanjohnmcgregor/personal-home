@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Play, Pause, Plus, Edit, Share, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Play, Pause, Plus, Edit, Share, MoreVertical, Move } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -14,9 +14,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ErrorMessage } from '@/components/ui/error-message'
-// Removed PlaylistSongManager - now using draggable playlists on main page
 import { PlaylistForm } from '@/components/playlist/playlist-form'
 import { AddSongsDialog } from '@/components/search/add-songs-dialog'
+import { DraggableSongList } from '@/components/playlist/draggable-song-list'
 import { BPMAutoAnalyzer, BPMStatus } from '@/components/bpm'
 import { usePlaylist } from '@/lib/hooks/use-playlists'
 import { usePlaylists } from '@/lib/hooks/use-playlists'
@@ -30,7 +30,7 @@ export default function PlaylistDetailPage() {
   const playlistId = params.id as string
 
   const { playlist, loading, error, fetchPlaylist } = usePlaylist()
-  const { updatePlaylist, deletePlaylist, removeSongFromPlaylist } = usePlaylists()
+  const { updatePlaylist, deletePlaylist, removeSongFromPlaylist, reorderPlaylistSongs } = usePlaylists()
 
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentSong, setCurrentSong] = useState<string | null>(null)
@@ -38,6 +38,7 @@ export default function PlaylistDetailPage() {
   const [showAddSongs, setShowAddSongs] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null)
+  const [isReordering, setIsReordering] = useState(false)
 
   // Fetch playlist on mount
   useEffect(() => {
@@ -212,6 +213,29 @@ export default function PlaylistDetailPage() {
     }
   }
 
+  const handleReorderSongs = async (songIds: string[]) => {
+    if (!playlist) return
+
+    try {
+      const result = await reorderPlaylistSongs(playlist.id, { songIds })
+      if (result) {
+        toast({
+          title: 'Success',
+          description: 'Songs reordered successfully',
+        })
+        // Refresh playlist to get updated positions
+        fetchPlaylist(playlist.id)
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to reorder songs',
+        variant: 'destructive',
+      })
+      throw error // Re-throw to let DraggableSongList handle the revert
+    }
+  }
+
   const formatDuration = (totalDuration: number) => {
     const hours = Math.floor(totalDuration / 3600000)
     const minutes = Math.floor((totalDuration % 3600000) / 60000)
@@ -369,6 +393,16 @@ export default function PlaylistDetailPage() {
               <Plus className="h-4 w-4 mr-2" />
               Add Songs
             </Button>
+
+            {playlist.songs.length > 1 && (
+              <Button 
+                variant={isReordering ? "default" : "outline"} 
+                onClick={() => setIsReordering(!isReordering)}
+              >
+                <Move className="h-4 w-4 mr-2" />
+                {isReordering ? 'Done' : 'Reorder'}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -385,93 +419,40 @@ export default function PlaylistDetailPage() {
       {/* Songs List */}
       <div className="bg-card rounded-lg">
         <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Songs</h2>
-          {playlist.songs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No songs in this playlist yet.</p>
-              <p className="text-sm">Click &quot;Add Songs&quot; to get started.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {playlist.songs.map((playlistSong, index) => (
-                <div
-                  key={playlistSong.id}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="w-8 text-sm text-muted-foreground text-center">
-                    {index + 1}
-                  </div>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-1"
-                    onClick={() => handlePlay(playlistSong)}
-                  >
-                    {currentSong === playlistSong.song.id && isPlaying ? (
-                      <Pause className="h-4 w-4" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">
-                      {playlistSong.song.title}
-                    </div>
-                    <div className="text-sm text-muted-foreground truncate">
-                      {playlistSong.song.artist}
-                      {playlistSong.song.album && ` • ${playlistSong.song.album}`}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {playlistSong.song.bpm && (
-                      <Badge variant="outline" className="text-xs">
-                        {playlistSong.song.bpm} BPM
-                      </Badge>
-                    )}
-                    
-                    {playlistSong.song.duration && (
-                      <span>
-                        {Math.floor(playlistSong.song.duration / 60000)}:
-                        {((playlistSong.song.duration % 60000) / 1000).toFixed(0).padStart(2, '0')}
-                      </span>
-                    )}
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleRemoveSong(playlistSong)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          Remove from playlist
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Songs</h2>
+            {isReordering && (
+              <p className="text-sm text-muted-foreground">
+                Drag songs to reorder them
+              </p>
+            )}
+          </div>
+          <DraggableSongList
+            songs={playlist.songs}
+            onPlay={handlePlay}
+            onRemove={handleRemoveSong}
+            onReorder={handleReorderSongs}
+            currentlyPlaying={currentSong || undefined}
+            showPosition={true}
+            showPreviewButtons={true}
+            isReordering={isReordering}
+          />
         </div>
-        <div className="px-6 py-4 border-t text-sm text-muted-foreground">
-          <p>
-            To reorder songs or move them between playlists, visit the{' '}
-            <Button
-              variant="link"
-              className="p-0 h-auto text-primary"
-              onClick={() => router.push('/dashboard/playlists')}
-            >
-              Playlist Manager
-            </Button>
-          </p>
-        </div>
+        {!isReordering && (
+          <div className="px-6 py-4 border-t text-sm text-muted-foreground">
+            <p>
+              Click &quot;Reorder&quot; to drag and drop songs, or visit the{' '}
+              <Button
+                variant="link"
+                className="p-0 h-auto text-primary"
+                onClick={() => router.push('/dashboard/playlists')}
+              >
+                Playlist Manager
+              </Button>
+              {' '}to move songs between playlists.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Edit Form Dialog */}
