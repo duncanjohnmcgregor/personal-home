@@ -244,16 +244,38 @@
 
 ## Phase 6: Advanced Features (Priority: Low)
 
-### 6.1 Playlist Collaboration
-**Estimated Time: 6-8 hours**
+### 6.1 Advanced Playlist Management Features
+**Estimated Time: 8-10 hours**
 **Dependencies: Phase 2, Phase 3**
+- [ ] Song Search & Add Functionality
+  - [ ] Implement advanced song search across all connected platforms
+  - [ ] Create unified search interface with filtering options
+  - [ ] Add real-time search suggestions and autocomplete
+  - [ ] Implement quick-add functionality from search results
+- [ ] Modern UI with Physics Engine
+  - [ ] Integrate physics engine (e.g., Matter.js, Cannon.js) for satisfying interactions
+  - [ ] Implement smooth drag and drop with realistic physics feedback
+  - [ ] Add visual effects for drag operations (shadows, scaling, momentum)
+  - [ ] Create satisfying animation feedback for all interactions
+  - [ ] Implement touch gestures for mobile devices
+- [ ] Drag & Drop Playlist Organization
+  - [ ] Create dedicated playlist organization screens
+  - [ ] Implement multi-playlist view with side-by-side layout
+  - [ ] Add drag and drop between playlists with visual feedback
+  - [ ] Create bulk song selection and movement functionality
+  - [ ] Implement playlist folder/category system for better organization
+  - [ ] Add undo/redo functionality for playlist modifications
+
+### 6.2 Playlist Collaboration
+**Estimated Time: 6-8 hours**
+**Dependencies: Phase 2, Phase 3, 6.1**
 - [ ] Implement playlist sharing functionality
 - [ ] Add collaborative editing features
 - [ ] Create real-time collaboration using WebSockets
 - [ ] Implement permission management
 - [ ] Add activity feeds for shared playlists
 
-### 6.2 Music Discovery & Recommendations
+### 6.3 Music Discovery & Recommendations
 **Estimated Time: 5-6 hours**
 **Dependencies: Phase 4**
 - [ ] Implement recommendation engine
@@ -262,7 +284,7 @@
 - [ ] Implement similar song suggestions
 - [ ] Create genre-based browsing
 
-### 6.3 Analytics & Insights
+### 6.4 Analytics & Insights
 **Estimated Time: 4-5 hours**
 **Dependencies: Phase 5**
 - [ ] Create analytics dashboard
@@ -389,10 +411,10 @@
 ## Estimated Total Development Time
 - **Phase 1-3 (Core Features + DevOps Infrastructure)**: 30-42 hours
 - **Phase 4-5 (Multi-platform)**: 20-25 hours  
-- **Phase 6 (Advanced Features)**: 15-20 hours
+- **Phase 6 (Advanced Features)**: 23-28 hours
 - **Phase 7 (Testing & Optimization)**: 13-17 hours
 - **Phase 8 (Advanced DevOps)**: 10-13 hours
-- **Total**: 88-117 hours
+- **Total**: 96-125 hours
 
 ## Notes for Cursor Agents
 - Always check dependencies before starting a task
