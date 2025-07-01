@@ -1,4 +1,4 @@
-# Music Playlist Manager - Development TODO
+# Music Playlist Manager - Development TODO TEST
 
 ## Project Status: Foundation Complete ✅
 - ✅ Project structure created
