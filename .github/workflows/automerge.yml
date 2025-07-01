@@ -5,18 +5,65 @@ on:
     types:
       - completed
     branches: [main, develop]
+  # Also trigger on PR reviews and label changes
+  pull_request_review:
+    types: [submitted]
+  pull_request:
+    types: [labeled, unlabeled]
+  # Allow manual trigger for debugging
+  workflow_dispatch:
 
 jobs:
   automerge:
     runs-on: ubuntu-latest
-    # Only run if the CI workflow completed successfully
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only run if the CI workflow completed successfully or on other triggers
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request_review' ||
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     permissions:
       contents: write
       pull-requests: write
+      issues: write
+      checks: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - id: automerge
         name: automerge
         uses: "pascalgn/automerge-action@v0.16.4"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          # Merge method: can be "merge", "rebase" or "squash"
+          MERGE_METHOD: "squash"
+          # Only merge PRs with the "automerge" label
+          MERGE_LABELS: "automerge,!do not merge,!work in progress,!wip"
+          # Remove branch after merge
+          MERGE_DELETE_BRANCH: "true"
+          # Update PR before merging
+          UPDATE_METHOD: "merge"
+          # Retry settings
+          MERGE_RETRIES: "3"
+          MERGE_RETRY_SLEEP: "10000"
+          # Commit message for squash merges
+          MERGE_COMMIT_MESSAGE: "pull-request-title-and-description"
+          # Only merge if all required status checks pass
+          MERGE_REQUIRED_APPROVALS: "0"
+          # Filter PRs by author (optional, remove if not needed)
+          # MERGE_FILTER_AUTHOR: "dependabot[bot],renovate[bot]"
+          # Enable auto-update of PRs
+          UPDATE_LABELS: "automerge"
+
+      - name: Report Status
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        run: |
+          echo "✅ PR #${{ steps.automerge.outputs.pullRequestNumber }} was successfully merged!"
+          echo "Merge commit: ${{ steps.automerge.outputs.mergeCommitSha }}"
+
+      - name: Report Skipped
+        if: steps.automerge.outputs.mergeResult == 'skipped'
+        run: |
+          echo "⏭️ PR merge was skipped"
+          echo "Reason: PR may not have required labels or checks haven't passed yet"
