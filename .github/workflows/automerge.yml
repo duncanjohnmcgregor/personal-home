@@ -5,11 +5,9 @@ on:
     types:
       - completed
     branches: [main, develop]
-  # Also trigger on PR reviews and label changes
+  # Also trigger on PR reviews
   pull_request_review:
     types: [submitted]
-  pull_request:
-    types: [labeled, unlabeled]
   # Allow manual trigger for debugging
   workflow_dispatch:
 
@@ -20,7 +18,6 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'pull_request_review' ||
-      github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     permissions:
       contents: write
@@ -38,8 +35,11 @@ jobs:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           # Merge method: can be "merge", "rebase" or "squash"
           MERGE_METHOD: "squash"
-          # Only merge PRs with the "automerge" label
-          MERGE_LABELS: "automerge,!do not merge,!work in progress,!wip"
+          # No label requirements - will merge any PR from allowed authors
+          MERGE_LABELS: ""
+          # Still respect blocking labels
+          MERGE_REMOVE_LABELS: ""
+          MERGE_BLOCK_LABELS: "do not merge,work in progress,wip,hold"
           # Remove branch after merge
           MERGE_DELETE_BRANCH: "true"
           # Update PR before merging
@@ -51,19 +51,26 @@ jobs:
           MERGE_COMMIT_MESSAGE: "pull-request-title-and-description"
           # Only merge if all required status checks pass
           MERGE_REQUIRED_APPROVALS: "0"
-          # Filter PRs by author (optional, remove if not needed)
-          # MERGE_FILTER_AUTHOR: "dependabot[bot],renovate[bot]"
-          # Enable auto-update of PRs
-          UPDATE_LABELS: "automerge"
+          # IMPORTANT: Replace 'your-github-username' with your actual GitHub username
+          # You can add multiple usernames separated by commas
+          MERGE_FILTER_AUTHOR: "your-github-username"
+          # Don't require any labels for updating
+          UPDATE_LABELS: ""
 
       - name: Report Status
         if: steps.automerge.outputs.mergeResult == 'merged'
         run: |
           echo "✅ PR #${{ steps.automerge.outputs.pullRequestNumber }} was successfully merged!"
           echo "Merge commit: ${{ steps.automerge.outputs.mergeCommitSha }}"
+          echo "Author: ${{ github.event.pull_request.user.login || github.actor }}"
 
       - name: Report Skipped
         if: steps.automerge.outputs.mergeResult == 'skipped'
         run: |
           echo "⏭️ PR merge was skipped"
-          echo "Reason: PR may not have required labels or checks haven't passed yet"
+          echo "Possible reasons:"
+          echo "  - PR author is not in the allowed list"
+          echo "  - PR has blocking labels (do not merge, wip, etc.)"
+          echo "  - Required checks haven't passed yet"
+          echo "  - PR is not ready for merge"
+          echo "Current author: ${{ github.event.pull_request.user.login || github.actor }}"
