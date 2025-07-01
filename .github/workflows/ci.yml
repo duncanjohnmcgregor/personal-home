@@ -23,8 +23,48 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Generate Prisma client
-      run: npx prisma generate
+    - name: Validate Database Schema
+      run: |
+        echo "🔍 Validating Prisma schema..."
+        
+        # Check schema syntax
+        if npx prisma validate; then
+          echo "✅ Prisma schema is valid"
+        else
+          echo "❌ Prisma schema validation failed"
+          exit 1
+        fi
+        
+        # Generate client to test schema compatibility
+        if npx prisma generate; then
+          echo "✅ Prisma client generated successfully"
+        else
+          echo "❌ Failed to generate Prisma client"
+          exit 1
+        fi
+        
+        # Validate migration files
+        echo ""
+        echo "📋 Checking migration files..."
+        if [ -d "prisma/migrations" ]; then
+          migration_count=$(find prisma/migrations -name "*.sql" | wc -l)
+          echo "✅ Found $migration_count migration files"
+          
+          # Check for common migration issues
+          if grep -r "DROP TABLE" prisma/migrations/ 2>/dev/null; then
+            echo "⚠️ Warning: Found DROP TABLE statements in migrations"
+            echo "   Make sure this is intentional and won't cause data loss"
+          fi
+          
+          if grep -r "DROP COLUMN" prisma/migrations/ 2>/dev/null; then
+            echo "⚠️ Warning: Found DROP COLUMN statements in migrations"
+            echo "   Make sure this is intentional and won't cause data loss"
+          fi
+        else
+          echo "ℹ️ No migration files found (using db push workflow)"
+        fi
+        
+        echo "✅ Database schema validation completed"
 
     - name: Run type checking
       run: npm run type-check
@@ -32,8 +72,85 @@ jobs:
     - name: Run linting
       run: npm run lint
 
+    - name: Test Database Schema Generation
+      run: |
+        echo "🧪 Testing database schema generation..."
+        
+        # Test that the generated client works with TypeScript
+        cat > test-schema.ts << 'EOF'
+        import { PrismaClient } from '@prisma/client'
+        
+        // Test that all main models are accessible
+        const prisma = new PrismaClient()
+        
+        // Type check - this will fail if schema has issues
+        async function testTypes() {
+          // Test User model
+          const user: Parameters<typeof prisma.user.create>[0] = {
+            data: {
+              email: 'test@example.com',
+              name: 'Test User'
+            }
+          }
+          
+          // Test Playlist model
+          const playlist: Parameters<typeof prisma.playlist.create>[0] = {
+            data: {
+              name: 'Test Playlist',
+              userId: 'test-user-id'
+            }
+          }
+          
+          // Test Song model
+          const song: Parameters<typeof prisma.song.create>[0] = {
+            data: {
+              title: 'Test Song',
+              artist: 'Test Artist'
+            }
+          }
+          
+          console.log('✅ All model types are valid')
+        }
+        
+        // Don't actually run the function, just test compilation
+        export { testTypes }
+        EOF
+        
+        # Test TypeScript compilation with generated types
+        if npx tsc --noEmit test-schema.ts; then
+          echo "✅ Database schema types are valid"
+          rm test-schema.ts
+        else
+          echo "❌ Database schema type checking failed"
+          rm test-schema.ts
+          exit 1
+        fi
+
     - name: Build application
       run: npm run build
+
+    - name: Test Build Artifacts
+      run: |
+        echo "🔍 Testing build artifacts..."
+        
+        # Check that essential files were created
+        if [ ! -d ".next" ]; then
+          echo "❌ .next directory not found"
+          exit 1
+        fi
+        
+        if [ ! -f ".next/BUILD_ID" ]; then
+          echo "❌ BUILD_ID file not found"
+          exit 1
+        fi
+        
+        # Check that Prisma client is included in build
+        if [ ! -d "node_modules/.prisma" ]; then
+          echo "❌ Prisma client not found in node_modules"
+          exit 1
+        fi
+        
+        echo "✅ Build artifacts validated"
 
     - name: Cache build artifacts
       uses: actions/cache@v3
@@ -41,6 +158,27 @@ jobs:
         path: |
           .next/cache
           node_modules/.cache
-        key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }}
+          node_modules/.prisma
+        key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json', '**/prisma/schema.prisma') }}
         restore-keys: |
           ${{ runner.os }}-build-
+
+    - name: CI Summary
+      if: always()
+      run: |
+        echo ""
+        echo "📋 CI Summary"
+        echo "=============="
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ All checks passed:"
+          echo "  ✅ Database schema validation"
+          echo "  ✅ TypeScript type checking"
+          echo "  ✅ ESLint code quality"
+          echo "  ✅ Application build"
+          echo "  ✅ Build artifacts validation"
+          echo ""
+          echo "🚀 Ready for deployment!"
+        else
+          echo "❌ CI checks failed"
+          echo "Please review the logs above for detailed error information"
+        fi
