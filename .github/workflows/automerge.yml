@@ -5,18 +5,72 @@ on:
     types:
       - completed
     branches: [main, develop]
+  # Also trigger on PR reviews
+  pull_request_review:
+    types: [submitted]
+  # Allow manual trigger for debugging
+  workflow_dispatch:
 
 jobs:
   automerge:
     runs-on: ubuntu-latest
-    # Only run if the CI workflow completed successfully
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only run if the CI workflow completed successfully or on other triggers
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request_review' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     permissions:
       contents: write
       pull-requests: write
+      issues: write
+      checks: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - id: automerge
         name: automerge
         uses: "pascalgn/automerge-action@v0.16.4"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          # Merge method: can be "merge", "rebase" or "squash"
+          MERGE_METHOD: "squash"
+          # No label requirements - will merge any PR from allowed authors
+          MERGE_LABELS: ""
+          # Still respect blocking labels
+          MERGE_REMOVE_LABELS: ""
+          MERGE_BLOCK_LABELS: "do not merge,work in progress,wip,hold"
+          # Remove branch after merge
+          MERGE_DELETE_BRANCH: "true"
+          # Update PR before merging
+          UPDATE_METHOD: "merge"
+          # Retry settings
+          MERGE_RETRIES: "3"
+          MERGE_RETRY_SLEEP: "10000"
+          # Commit message for squash merges
+          MERGE_COMMIT_MESSAGE: "pull-request-title-and-description"
+          # Only merge if all required status checks pass
+          MERGE_REQUIRED_APPROVALS: "0"
+          # IMPORTANT: Replace 'your-github-username' with your actual GitHub username
+          # You can add multiple usernames separated by commas
+          MERGE_FILTER_AUTHOR: "your-github-username"
+          # Don't require any labels for updating
+          UPDATE_LABELS: ""
+
+      - name: Report Status
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        run: |
+          echo "✅ PR #${{ steps.automerge.outputs.pullRequestNumber }} was successfully merged!"
+          echo "Merge commit: ${{ steps.automerge.outputs.mergeCommitSha }}"
+          echo "Author: ${{ github.event.pull_request.user.login || github.actor }}"
+
+      - name: Report Skipped
+        if: steps.automerge.outputs.mergeResult == 'skipped'
+        run: |
+          echo "⏭️ PR merge was skipped"
+          echo "Possible reasons:"
+          echo "  - PR author is not in the allowed list"
+          echo "  - PR has blocking labels (do not merge, wip, etc.)"
+          echo "  - Required checks haven't passed yet"
+          echo "  - PR is not ready for merge"
+          echo "Current author: ${{ github.event.pull_request.user.login || github.actor }}"
